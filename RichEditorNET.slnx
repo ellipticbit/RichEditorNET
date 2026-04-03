@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="RichEditorNET/RichEditorNET.csproj" />
+  <Project Path="Test/Test.csproj" Id="bda44cca-d30f-404d-9ce0-f50fbccbaa95" />
+</Solution>
