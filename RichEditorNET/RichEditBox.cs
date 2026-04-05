@@ -1,6 +1,8 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -25,6 +27,8 @@ namespace EllipticBit.RichEditorNET
 			}
 		}
 
+		#region - Properties -
+
 		[DefaultValue(true)]
 		[Category("Behavior")]
 		[Description("Enables or disables the system spell checker for this editor.")]
@@ -41,11 +45,118 @@ namespace EllipticBit.RichEditorNET
 		}
 		private bool _enableSpellCheck = true;
 
+		[DefaultValue(320)]
+		[Category("Behavior")]
+		[Description("Default display width in pixels for inserted images.")]
+		public int DefaultImageWidth
+		{
+			get => _defaultImageWidth;
+			set
+			{
+				if (value <= 0) throw new ArgumentOutOfRangeException(nameof(value), "Width must be greater than zero.");
+				_defaultImageWidth = value;
+			}
+		}
+		private int _defaultImageWidth = 320;
+
+		[DefaultValue(240)]
+		[Category("Behavior")]
+		[Description("Default display height in pixels for inserted images.")]
+		public int DefaultImageHeight
+		{
+			get => _defaultImageHeight;
+			set
+			{
+				if (value <= 0) throw new ArgumentOutOfRangeException(nameof(value), "Height must be greater than zero.");
+				_defaultImageHeight = value;
+			}
+		}
+		private int _defaultImageHeight = 240;
+
+		[DefaultValue(true)]
+		[Category("Behavior")]
+		[Description("Enables or disables bold formatting.")]
+		public bool EnableBold { get; set; } = true;
+
+		[DefaultValue(true)]
+		[Category("Behavior")]
+		[Description("Enables or disables italic formatting.")]
+		public bool EnableItalic { get; set; } = true;
+
+		[DefaultValue(true)]
+		[Category("Behavior")]
+		[Description("Enables or disables underline formatting.")]
+		public bool EnableUnderline { get; set; } = true;
+
+		[DefaultValue(true)]
+		[Category("Behavior")]
+		[Description("Enables or disables strikethrough formatting.")]
+		public bool EnableStrikeThrough { get; set; } = true;
+
+		[DefaultValue(true)]
+		[Category("Behavior")]
+		[Description("Enables or disables font color formatting.")]
+		public bool EnableFontColor { get; set; } = true;
+
+		[DefaultValue(true)]
+		[Category("Behavior")]
+		[Description("Enables or disables background color formatting.")]
+		public bool EnableBackgroundColor { get; set; } = true;
+
+		[DefaultValue(true)]
+		[Category("Behavior")]
+		[Description("Enables or disables font name formatting.")]
+		public bool EnableFontName { get; set; } = true;
+
+		[DefaultValue(true)]
+		[Category("Behavior")]
+		[Description("Enables or disables font size formatting.")]
+		public bool EnableFontSize { get; set; } = true;
+
+		[DefaultValue(true)]
+		[Category("Behavior")]
+		[Description("Enables or disables superscript formatting.")]
+		public bool EnableSuperscript { get; set; } = true;
+
+		[DefaultValue(true)]
+		[Category("Behavior")]
+		[Description("Enables or disables subscript formatting.")]
+		public bool EnableSubscript { get; set; } = true;
+
+		[DefaultValue(true)]
+		[Category("Behavior")]
+		[Description("Enables or disables list formatting.")]
+		public bool EnableLists { get; set; } = true;
+
+		[DefaultValue(true)]
+		[Category("Behavior")]
+		[Description("Enables or disables paragraph alignment formatting.")]
+		public bool EnableAlignment { get; set; } = true;
+
+		[DefaultValue(true)]
+		[Category("Behavior")]
+		[Description("Enables or disables paragraph indentation.")]
+		public bool EnableIndent { get; set; } = true;
+
+		[DefaultValue(true)]
+		[Category("Behavior")]
+		[Description("Enables or disables hyperlink insertion.")]
+		public bool EnableHyperlinks { get; set; } = true;
+
+		[DefaultValue(true)]
+		[Category("Behavior")]
+		[Description("Enables or disables image insertion.")]
+		public bool EnableImages { get; set; } = true;
+
 		private ITextDocument2? _textDocument;
 
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public ITextDocument2 TextDocument => _textDocument ?? throw new InvalidOperationException("The control handle has not been created.");
+
+		#endregion
+
+		#region - Control Behaviors -
 
 		protected override void OnHandleCreated(EventArgs e)
 		{
@@ -130,12 +241,15 @@ namespace EllipticBit.RichEditorNET
 			base.OnMouseDown(e);
 		}
 
+		#endregion
+
 		#region - Text Formatting -
 
 		/// <summary>
 		/// Toggles bold formatting on the current selection.
 		/// </summary>
 		public void ToggleBold() {
+			if (!EnableBold) throw new InvalidOperationException("Bold formatting is disabled.");
 			var selection = TextDocument.Selection2;
 			try {
 				var font = selection.Font;
@@ -155,6 +269,7 @@ namespace EllipticBit.RichEditorNET
 		/// Toggles italic formatting on the current selection.
 		/// </summary>
 		public void ToggleItalic() {
+			if (!EnableItalic) throw new InvalidOperationException("Italic formatting is disabled.");
 			var selection = TextDocument.Selection2;
 			try {
 				var font = selection.Font;
@@ -175,6 +290,7 @@ namespace EllipticBit.RichEditorNET
 		/// </summary>
 		/// <param name="style">The underline style to apply. Defaults to <see cref="UnderlineStyle.Single"/>.</param>
 		public void ToggleUnderline(UnderlineStyle style = UnderlineStyle.Single) {
+			if (!EnableUnderline) throw new InvalidOperationException("Underline formatting is disabled.");
 			var selection = TextDocument.Selection2;
 			try {
 				var font = selection.Font;
@@ -194,6 +310,7 @@ namespace EllipticBit.RichEditorNET
 		/// Toggles strikethrough formatting on the current selection.
 		/// </summary>
 		public void ToggleStrikeThrough() {
+			if (!EnableStrikeThrough) throw new InvalidOperationException("Strikethrough formatting is disabled.");
 			var selection = TextDocument.Selection2;
 			try {
 				var font = selection.Font;
@@ -214,6 +331,7 @@ namespace EllipticBit.RichEditorNET
 		/// </summary>
 		/// <param name="color">The color to apply. Use <see cref="Color.Empty"/> to reset to the automatic color.</param>
 		public void SetFontColor(Color color) {
+			if (!EnableFontColor) throw new InvalidOperationException("Font color formatting is disabled.");
 			var selection = TextDocument.Selection2;
 			try {
 				var font = selection.Font;
@@ -234,6 +352,7 @@ namespace EllipticBit.RichEditorNET
 		/// </summary>
 		/// <param name="color">The color to apply. Use <see cref="Color.Empty"/> to reset to the automatic color.</param>
 		public void SetBackgroundColor(Color color) {
+			if (!EnableBackgroundColor) throw new InvalidOperationException("Background color formatting is disabled.");
 			var selection = TextDocument.Selection2;
 			try {
 				var font = selection.Font;
@@ -254,6 +373,7 @@ namespace EllipticBit.RichEditorNET
 		/// </summary>
 		/// <param name="name">The font family name to apply.</param>
 		public void SetFontName(string name) {
+			if (!EnableFontName) throw new InvalidOperationException("Font name formatting is disabled.");
 			if (string.IsNullOrEmpty(name)) throw new ArgumentException("Font name cannot be null or empty.", nameof(name));
 			var selection = TextDocument.Selection2;
 			try {
@@ -275,6 +395,7 @@ namespace EllipticBit.RichEditorNET
 		/// </summary>
 		/// <param name="size">The font size in points. Must be greater than zero.</param>
 		public void SetFontSize(float size) {
+			if (!EnableFontSize) throw new InvalidOperationException("Font size formatting is disabled.");
 			if (size <= 0) throw new ArgumentOutOfRangeException(nameof(size), "Font size must be greater than zero.");
 			var selection = TextDocument.Selection2;
 			try {
@@ -296,6 +417,7 @@ namespace EllipticBit.RichEditorNET
 		/// </summary>
 		/// <param name="points">The number of points to increase by. Defaults to 1.</param>
 		public void IncreaseFontSize(float points = 1f) {
+			if (!EnableFontSize) throw new InvalidOperationException("Font size formatting is disabled.");
 			if (points <= 0) throw new ArgumentOutOfRangeException(nameof(points), "Point increment must be greater than zero.");
 			var selection = TextDocument.Selection2;
 			try {
@@ -318,6 +440,7 @@ namespace EllipticBit.RichEditorNET
 		/// </summary>
 		/// <param name="points">The number of points to decrease by. Defaults to 1.</param>
 		public void DecreaseFontSize(float points = 1f) {
+			if (!EnableFontSize) throw new InvalidOperationException("Font size formatting is disabled.");
 			if (points <= 0) throw new ArgumentOutOfRangeException(nameof(points), "Point decrement must be greater than zero.");
 			var selection = TextDocument.Selection2;
 			try {
@@ -340,6 +463,7 @@ namespace EllipticBit.RichEditorNET
 		/// Disables subscript if superscript is being enabled.
 		/// </summary>
 		public void ToggleSuperscript() {
+			if (!EnableSuperscript) throw new InvalidOperationException("Superscript formatting is disabled.");
 			var selection = TextDocument.Selection2;
 			try {
 				var font = selection.Font;
@@ -366,6 +490,7 @@ namespace EllipticBit.RichEditorNET
 		/// Disables superscript if subscript is being enabled.
 		/// </summary>
 		public void ToggleSubscript() {
+			if (!EnableSubscript) throw new InvalidOperationException("Subscript formatting is disabled.");
 			var selection = TextDocument.Selection2;
 			try {
 				var font = selection.Font;
@@ -397,6 +522,7 @@ namespace EllipticBit.RichEditorNET
 		/// </summary>
 		/// <param name="style">The list style to apply.</param>
 		public void ToggleList(ListStyle style) {
+			if (!EnableLists) throw new InvalidOperationException("List formatting is disabled.");
 			var selection = TextDocument.Selection2;
 			try {
 				var para = selection.Para;
@@ -428,6 +554,7 @@ namespace EllipticBit.RichEditorNET
 		/// Has no effect if the selection is not in a list.
 		/// </summary>
 		public void IncreaseListLevel() {
+			if (!EnableLists) throw new InvalidOperationException("List formatting is disabled.");
 			var selection = TextDocument.Selection2;
 			try {
 				var para = selection.Para;
@@ -450,6 +577,7 @@ namespace EllipticBit.RichEditorNET
 		/// Has no effect if the selection is not in a list or is already at the top level.
 		/// </summary>
 		public void DecreaseListLevel() {
+			if (!EnableLists) throw new InvalidOperationException("List formatting is disabled.");
 			var selection = TextDocument.Selection2;
 			try {
 				var para = selection.Para;
@@ -472,6 +600,7 @@ namespace EllipticBit.RichEditorNET
 		/// </summary>
 		/// <param name="alignment">The alignment to apply.</param>
 		public void SetAlignment(ParagraphAlignment alignment) {
+			if (!EnableAlignment) throw new InvalidOperationException("Paragraph alignment formatting is disabled.");
 			var selection = TextDocument.Selection2;
 			try {
 				var para = selection.Para;
@@ -492,6 +621,7 @@ namespace EllipticBit.RichEditorNET
 		/// </summary>
 		/// <param name="points">The number of points to indent by. Defaults to 36 (0.5 inch).</param>
 		public void Indent(float points = 36f) {
+			if (!EnableIndent) throw new InvalidOperationException("Paragraph indentation is disabled.");
 			if (points <= 0) throw new ArgumentOutOfRangeException(nameof(points), "Indent amount must be greater than zero.");
 			var selection = TextDocument.Selection2;
 			try {
@@ -514,6 +644,7 @@ namespace EllipticBit.RichEditorNET
 		/// </summary>
 		/// <param name="points">The number of points to outdent by. Defaults to 36 (0.5 inch).</param>
 		public void Outdent(float points = 36f) {
+			if (!EnableIndent) throw new InvalidOperationException("Paragraph indentation is disabled.");
 			if (points <= 0) throw new ArgumentOutOfRangeException(nameof(points), "Outdent amount must be greater than zero.");
 			var selection = TextDocument.Selection2;
 			try {
@@ -529,6 +660,158 @@ namespace EllipticBit.RichEditorNET
 			finally {
 				Marshal.ReleaseComObject(selection);
 			}
+		}
+
+		#endregion
+
+		#region - Content Insertion -
+
+		/// <summary>
+		/// Inserts a hyperlink at the current selection position.
+		/// </summary>
+		/// <param name="url">The URL for the hyperlink. Must be a valid absolute URL.</param>
+		/// <param name="displayText">The visible text for the hyperlink.</param>
+		public void InsertHyperlink(string url, string displayText) {
+			if (!EnableHyperlinks) throw new InvalidOperationException("Hyperlink insertion is disabled.");
+			if (!Uri.TryCreate(url, UriKind.Absolute, out _))
+				throw new ArgumentException("The URL must be a valid absolute URL.", nameof(url));
+			if (string.IsNullOrEmpty(displayText))
+				throw new ArgumentException("Display text cannot be null or empty.", nameof(displayText));
+
+			int cpStart;
+			var selection = TextDocument.Selection2;
+			try {
+				cpStart = selection.Start;
+				selection.TypeText(displayText);
+			}
+			finally {
+				Marshal.ReleaseComObject(selection);
+			}
+
+			var range = TextDocument.Range2(cpStart, cpStart + displayText.Length);
+			try {
+				range.URL = "\"" + url + "\"";
+			}
+			finally {
+				Marshal.ReleaseComObject(range);
+			}
+		}
+
+		/// <summary>
+		/// Inserts an image at the current selection position. The image data is stored as-is
+		/// in the document without modification.
+		/// </summary>
+		/// <param name="imageStream">A stream containing the image data. Supported formats are JPEG, PNG, and GIF.</param>
+		/// <param name="altText">Optional alt text for the image.</param>
+		public void InsertImage(Stream imageStream, string altText = "") {
+			if (!EnableImages) throw new InvalidOperationException("Image insertion is disabled.");
+			if (imageStream == null) throw new ArgumentNullException(nameof(imageStream));
+
+			byte[] imageData;
+			using (var ms = new MemoryStream()) {
+				imageStream.CopyTo(ms);
+				imageData = ms.ToArray();
+			}
+
+			using (var ms = new MemoryStream(imageData))
+			using (var image = Image.FromStream(ms)) {
+				GetImageFormat(image);
+			}
+
+			var comStream = CreateComStream(imageData);
+			try {
+				var selection = TextDocument.Selection2;
+				try {
+					selection.InsertImage(DefaultImageWidth, DefaultImageHeight, 0, 0, altText ?? "", comStream);
+				}
+				finally {
+					Marshal.ReleaseComObject(selection);
+				}
+			}
+			finally {
+				Marshal.ReleaseComObject(comStream);
+			}
+		}
+
+		/// <summary>
+		/// Inserts a downsampled thumbnail of the image at the current selection position,
+		/// wrapped in a hyperlink to the original image URL. The thumbnail is resized to
+		/// <see cref="DefaultImageWidth"/> by <see cref="DefaultImageHeight"/> using high-quality
+		/// bicubic interpolation.
+		/// </summary>
+		/// <param name="imageUrl">The URL of the original full-size image. Must be a valid absolute URL.</param>
+		/// <param name="imageStream">A stream containing the original image data. Supported formats are JPEG, PNG, and GIF.</param>
+		/// <param name="altText">Optional alt text for the thumbnail.</param>
+		public void InsertLinkedThumbnail(string imageUrl, Stream imageStream, string altText = "") {
+			if (!EnableImages) throw new InvalidOperationException("Image insertion is disabled.");
+			if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out _))
+				throw new ArgumentException("The URL must be a valid absolute URL.", nameof(imageUrl));
+			if (imageStream == null) throw new ArgumentNullException(nameof(imageStream));
+
+			byte[] thumbnailData;
+			using (var ms = new MemoryStream()) {
+				imageStream.CopyTo(ms);
+				ms.Position = 0;
+				using (var image = Image.FromStream(ms)) {
+					var format = GetImageFormat(image);
+					thumbnailData = CreateThumbnail(image, DefaultImageWidth, DefaultImageHeight, format);
+				}
+			}
+
+			var comStream = CreateComStream(thumbnailData);
+			try {
+				int cpStart;
+				var selection = TextDocument.Selection2;
+				try {
+					cpStart = selection.Start;
+					selection.InsertImage(DefaultImageWidth, DefaultImageHeight, 0, 0, altText ?? "", comStream);
+				}
+				finally {
+					Marshal.ReleaseComObject(selection);
+				}
+
+				var range = TextDocument.Range2(cpStart, cpStart + 1);
+				try {
+					range.URL = "\"" + imageUrl + "\"";
+				}
+				finally {
+					Marshal.ReleaseComObject(range);
+				}
+			}
+			finally {
+				Marshal.ReleaseComObject(comStream);
+			}
+		}
+
+		private static ImageFormat GetImageFormat(Image image) {
+			if (image.RawFormat.Guid == ImageFormat.Jpeg.Guid) return ImageFormat.Jpeg;
+			if (image.RawFormat.Guid == ImageFormat.Png.Guid) return ImageFormat.Png;
+			if (image.RawFormat.Guid == ImageFormat.Gif.Guid) return ImageFormat.Gif;
+			throw new ArgumentException("Unsupported image format. Only JPEG, PNG, and GIF images are supported.");
+		}
+
+		private static byte[] CreateThumbnail(Image original, int width, int height, ImageFormat format) {
+			using (var thumbnail = new Bitmap(width, height))
+			using (var graphics = Graphics.FromImage(thumbnail)) {
+				graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+				graphics.CompositingQuality = CompositingQuality.HighQuality;
+				graphics.SmoothingMode = SmoothingMode.HighQuality;
+				graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+				graphics.DrawImage(original, 0, 0, width, height);
+
+				using (var ms = new MemoryStream()) {
+					thumbnail.Save(ms, format);
+					return ms.ToArray();
+				}
+			}
+		}
+
+		private static System.Runtime.InteropServices.ComTypes.IStream CreateComStream(byte[] data) {
+			int hr = PInvoke.CreateStreamOnHGlobal(IntPtr.Zero, true, out var stream);
+			if (hr != 0) Marshal.ThrowExceptionForHR(hr);
+			stream.Write(data, data.Length, IntPtr.Zero);
+			stream.Seek(0, 0, IntPtr.Zero);
+			return stream;
 		}
 
 		#endregion

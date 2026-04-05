@@ -28,5 +28,8 @@ namespace EllipticBit.RichEditorNET
 
 		[DllImport("user32.dll", CharSet = CharSet.Auto)]
 		internal static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, ref IntPtr lParam);
+
+		[DllImport("ole32.dll")]
+		internal static extern int CreateStreamOnHGlobal(IntPtr hGlobal, [MarshalAs(UnmanagedType.Bool)] bool fDeleteOnRelease, out System.Runtime.InteropServices.ComTypes.IStream ppstm);
 	}
 }
