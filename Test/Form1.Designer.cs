@@ -35,7 +35,7 @@ namespace Test
 			richTextBox1.Dock = DockStyle.Fill;
 			richTextBox1.Location = new Point(0, 0);
 			richTextBox1.Name = "richTextBox1";
-			richTextBox1.Size = new Size(800, 450);
+			richTextBox1.Size = new Size(1574, 929);
 			richTextBox1.TabIndex = 0;
 			richTextBox1.Text = "";
 			// 
@@ -43,9 +43,10 @@ namespace Test
 			// 
 			AutoScaleDimensions = new SizeF(13F, 32F);
 			AutoScaleMode = AutoScaleMode.Font;
-			ClientSize = new Size(800, 450);
+			ClientSize = new Size(1574, 929);
 			Controls.Add(richTextBox1);
 			Name = "Form1";
+			StartPosition = FormStartPosition.CenterScreen;
 			Text = "Form1";
 			ResumeLayout(false);
 		}

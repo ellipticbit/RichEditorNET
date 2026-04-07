@@ -4,41 +4,107 @@ using System.Runtime.InteropServices;
 namespace EllipticBit.RichEditorNET.TextObjectModel2
 {
 	/// <summary>
-	/// Extends <see cref="ITextFont"/> with additional TOM2 character formatting properties.
+	/// TOM2 font interface. All <see cref="ITextFont"/> members re-declared for correct vtable layout.
+	/// Member order matches the native tom.h vtable exactly.
 	/// </summary>
 	[ComImport]
 	[Guid("C241F5E3-7206-11D8-A2C7-00A0D1D6C6B3")]
 	[InterfaceType(ComInterfaceType.InterfaceIsDual)]
-	public interface ITextFont2 : ITextFont
+	public interface ITextFont2
 	{
-		[DispId(0x0600)]
+		// -------- ITextFont (55 slots) --------
+
+		ITextFont Duplicate
+		{
+			[return: MarshalAs(UnmanagedType.Interface)]
+			get;
+			[param: MarshalAs(UnmanagedType.Interface)]
+			set;
+		}
+
+		int CanChange();
+
+		int IsEqual([MarshalAs(UnmanagedType.Interface)] ITextFont pFont);
+
+		void Reset(int Value);
+
+		int Style { get; set; }
+
+		int AllCaps { get; set; }
+
+		int Animation { get; set; }
+
+		int BackColor { get; set; }
+
+		int Bold { get; set; }
+
+		int Emboss { get; set; }
+
+		int ForeColor { get; set; }
+
+		int Hidden { get; set; }
+
+		int Engrave { get; set; }
+
+		int Italic { get; set; }
+
+		float Kerning { get; set; }
+
+		int LanguageID { get; set; }
+
+		string Name
+		{
+			[return: MarshalAs(UnmanagedType.BStr)]
+			get;
+			[param: MarshalAs(UnmanagedType.BStr)]
+			set;
+		}
+
+		int Outline { get; set; }
+
+		float Position { get; set; }
+
+		int Protected { get; set; }
+
+		int Shadow { get; set; }
+
+		float Size { get; set; }
+
+		int SmallCaps { get; set; }
+
+		float Spacing { get; set; }
+
+		int StrikeThrough { get; set; }
+
+		int Subscript { get; set; }
+
+		int Superscript { get; set; }
+
+		int Underline { get; set; }
+
+		int Weight { get; set; }
+
+		// -------- ITextFont2 own entries (46 slots, exact tom.h order) --------
+		// Properties first (38 slots), then methods (8 slots).
+
 		int Count { get; }
 
-		[DispId(0x0601)]
 		int AutoLigatures { get; set; }
 
-		[DispId(0x0602)]
 		int AutospaceAlpha { get; set; }
 
-		[DispId(0x0603)]
 		int AutospaceNumeric { get; set; }
 
-		[DispId(0x0604)]
 		int AutospaceParens { get; set; }
 
-		[DispId(0x0605)]
 		int CharRep { get; set; }
 
-		[DispId(0x0606)]
 		int CompressionMode { get; set; }
 
-		[DispId(0x0607)]
 		int Cookie { get; set; }
 
-		[DispId(0x0608)]
 		int DoubleStrike { get; set; }
 
-		[DispId(0x0609)]
 		ITextFont2 Duplicate2
 		{
 			[return: MarshalAs(UnmanagedType.Interface)]
@@ -47,58 +113,40 @@ namespace EllipticBit.RichEditorNET.TextObjectModel2
 			set;
 		}
 
-		[DispId(0x0610)]
 		int LinkType { get; }
 
-		[DispId(0x0611)]
 		int MathZone { get; set; }
 
-		[DispId(0x0612)]
 		int ModWidthPairs { get; set; }
 
-		[DispId(0x0613)]
 		int ModWidthSpace { get; set; }
 
-		[DispId(0x0614)]
 		int OldNumbers { get; set; }
 
-		[DispId(0x0615)]
-		int OverlappingText { get; set; }
+		int Overlapping { get; set; }
 
-		[DispId(0x0616)]
 		int PositionSubSuper { get; set; }
 
-		[DispId(0x0617)]
 		int Scaling { get; set; }
 
-		[DispId(0x0618)]
 		float SpaceExtension { get; set; }
 
-		[DispId(0x0619)]
 		int UnderlinePositionMode { get; set; }
 
-		[DispId(0x0620)]
 		void GetEffects(out int pValue, out int pMask);
 
-		[DispId(0x0621)]
 		void GetEffects2(out int pValue, out int pMask);
 
-		[DispId(0x0622)]
-		int GetProperty(int Type);
+		void GetProperty2(int Type, out int pValue);
 
-		[DispId(0x0623)]
 		void GetPropertyInfo(int Index, out int pType, out int pValue);
 
-		[DispId(0x0624)]
 		int IsEqual2([MarshalAs(UnmanagedType.Interface)] ITextFont2 pFont);
 
-		[DispId(0x0625)]
 		void SetEffects(int Value, int Mask);
 
-		[DispId(0x0626)]
 		void SetEffects2(int Value, int Mask);
 
-		[DispId(0x0627)]
-		void SetProperty(int Type, int Value);
+		void SetProperty2(int Type, int Value);
 	}
 }

@@ -28,8 +28,6 @@ namespace EllipticBit.RichEditorNET.TextObjectModel2
 		{
 			[return: MarshalAs(UnmanagedType.Interface)]
 			get;
-			[param: MarshalAs(UnmanagedType.Interface)]
-			set;
 		}
 
 		[DispId(0x0203)]

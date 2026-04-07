@@ -17,6 +17,11 @@ namespace EllipticBit.RichEditorNET
 			PInvoke.LoadLibrary(PInvoke.MSFTEDIT_DLL);
 		}
 
+		public RichEditBox()
+		{
+			HideSelection = false;
+		}
+
 		protected override CreateParams CreateParams
 		{
 			get
@@ -148,11 +153,50 @@ namespace EllipticBit.RichEditorNET
 		[Description("Enables or disables image insertion.")]
 		public bool EnableImages { get; set; } = true;
 
+		[DefaultValue(true)]
+		[Category("Behavior")]
+		[Description("When true, the popup toolbar shows the embedded image button. When false, it shows the linked thumbnail button.")]
+		public bool RequireEmbeddedImage { get; set; } = true;
+
+		/// <summary>
+		/// Occurs when the Insert Hyperlink button is clicked on the popup toolbar.
+		/// </summary>
+		[Category("Action")]
+		[Description("Occurs when the Insert Hyperlink button is clicked on the popup toolbar.")]
+		public event EventHandler? InsertHyperlinkClicked;
+
+		/// <summary>
+		/// Occurs when the Insert Image button is clicked on the popup toolbar.
+		/// </summary>
+		[Category("Action")]
+		[Description("Occurs when the Insert Image button is clicked on the popup toolbar.")]
+		public event EventHandler? InsertImageClicked;
+
+		/// <summary>
+		/// Occurs when the Insert Linked Thumbnail button is clicked on the popup toolbar.
+		/// </summary>
+		[Category("Action")]
+		[Description("Occurs when the Insert Linked Thumbnail button is clicked on the popup toolbar.")]
+		public event EventHandler? InsertLinkedThumbnailClicked;
+
 		private ITextDocument2? _textDocument;
+		private PopupToolbar? _activeToolbar;
+		private ToolbarIconCache? _iconCache;
 
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public ITextDocument2 TextDocument => _textDocument ?? throw new InvalidOperationException("The control handle has not been created.");
+
+		internal void RaiseInsertHyperlinkClicked() => InsertHyperlinkClicked?.Invoke(this, EventArgs.Empty);
+		internal void RaiseInsertImageClicked() => InsertImageClicked?.Invoke(this, EventArgs.Empty);
+		internal void RaiseInsertLinkedThumbnailClicked() => InsertLinkedThumbnailClicked?.Invoke(this, EventArgs.Empty);
+
+		/// <summary>
+		/// Returns a TOM2 range corresponding to the current WinForms selection.
+		/// Unlike <see cref="ITextDocument2.Selection2"/>, this works even when the control does not have focus.
+		/// The caller must release the returned object via <see cref="Marshal.ReleaseComObject"/>.
+		/// </summary>
+		private ITextRange2 GetSelectionRange() => TextDocument.Range2(SelectionStart, SelectionStart + SelectionLength);
 
 		#endregion
 
@@ -176,6 +220,18 @@ namespace EllipticBit.RichEditorNET
 
 		protected override void OnHandleDestroyed(EventArgs e)
 		{
+			if (_activeToolbar != null)
+			{
+				_activeToolbar.Dispose();
+				_activeToolbar = null;
+			}
+
+			if (_iconCache != null)
+			{
+				_iconCache.Dispose();
+				_iconCache = null;
+			}
+
 			if (_textDocument != null)
 			{
 				Marshal.ReleaseComObject(_textDocument);
@@ -225,20 +281,52 @@ namespace EllipticBit.RichEditorNET
 			}
 		}
 
+		protected override void WndProc(ref Message m)
+		{
+			if (m.Msg == PInvoke.WM_CONTEXTMENU)
+				return;
+			base.WndProc(ref m);
+		}
+
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
 			if (e.Button == MouseButtons.Right)
 			{
 				int charIndex = GetCharIndexFromPosition(e.Location);
-				SelectionStart = charIndex;
-				SelectionLength = 0;
+				if (SelectionLength == 0 || charIndex < SelectionStart || charIndex >= SelectionStart + SelectionLength)
+				{
+					SelectionStart = charIndex;
+					SelectionLength = 0;
+				}
+				ShowPopupToolbar(PointToScreen(e.Location));
+				return;
 			}
-			else if (e.Button == MouseButtons.Left && ModifierKeys.HasFlag(Keys.Control))
+
+			if (e.Button == MouseButtons.Left && ModifierKeys.HasFlag(Keys.Control))
 			{
 				PInvoke.SendMessage(Handle, PInvoke.EM_SETOPTIONS, (IntPtr)PInvoke.ECOOP_OR, (IntPtr)PInvoke.ECO_AUTOWORDSELECTION);
 			}
 
 			base.OnMouseDown(e);
+		}
+
+		private void ShowPopupToolbar(Point screenLocation)
+		{
+			float currentScale = DeviceDpi / 96f;
+			if (_iconCache == null || _iconCache.DpiScale != currentScale)
+			{
+				_activeToolbar?.Dispose();
+				_activeToolbar = null;
+				_iconCache?.Dispose();
+				_iconCache = new ToolbarIconCache(currentScale);
+			}
+
+			if (_activeToolbar == null)
+			{
+				_activeToolbar = new PopupToolbar(this, _iconCache);
+			}
+
+			_activeToolbar.ShowAt(screenLocation);
 		}
 
 		#endregion
@@ -250,9 +338,9 @@ namespace EllipticBit.RichEditorNET
 		/// </summary>
 		public void ToggleBold() {
 			if (!EnableBold) throw new InvalidOperationException("Bold formatting is disabled.");
-			var selection = TextDocument.Selection2;
+			var range = GetSelectionRange();
 			try {
-				var font = selection.Font;
+				var font = range.Font;
 				try {
 					font.Bold = font.Bold == tomConstants.tomTrue ? tomConstants.tomFalse : tomConstants.tomTrue;
 				}
@@ -261,7 +349,7 @@ namespace EllipticBit.RichEditorNET
 				}
 			}
 			finally {
-				Marshal.ReleaseComObject(selection);
+				Marshal.ReleaseComObject(range);
 			}
 		}
 
@@ -270,9 +358,9 @@ namespace EllipticBit.RichEditorNET
 		/// </summary>
 		public void ToggleItalic() {
 			if (!EnableItalic) throw new InvalidOperationException("Italic formatting is disabled.");
-			var selection = TextDocument.Selection2;
+			var range = GetSelectionRange();
 			try {
-				var font = selection.Font;
+				var font = range.Font;
 				try {
 					font.Italic = font.Italic == tomConstants.tomTrue ? tomConstants.tomFalse : tomConstants.tomTrue;
 				}
@@ -281,7 +369,7 @@ namespace EllipticBit.RichEditorNET
 				}
 			}
 			finally {
-				Marshal.ReleaseComObject(selection);
+				Marshal.ReleaseComObject(range);
 			}
 		}
 
@@ -291,9 +379,9 @@ namespace EllipticBit.RichEditorNET
 		/// <param name="style">The underline style to apply. Defaults to <see cref="UnderlineStyle.Single"/>.</param>
 		public void ToggleUnderline(UnderlineStyle style = UnderlineStyle.Single) {
 			if (!EnableUnderline) throw new InvalidOperationException("Underline formatting is disabled.");
-			var selection = TextDocument.Selection2;
+			var range = GetSelectionRange();
 			try {
-				var font = selection.Font;
+				var font = range.Font;
 				try {
 					font.Underline = font.Underline == (int)style ? tomConstants.tomNone : (int)style;
 				}
@@ -302,7 +390,7 @@ namespace EllipticBit.RichEditorNET
 				}
 			}
 			finally {
-				Marshal.ReleaseComObject(selection);
+				Marshal.ReleaseComObject(range);
 			}
 		}
 
@@ -311,9 +399,9 @@ namespace EllipticBit.RichEditorNET
 		/// </summary>
 		public void ToggleStrikeThrough() {
 			if (!EnableStrikeThrough) throw new InvalidOperationException("Strikethrough formatting is disabled.");
-			var selection = TextDocument.Selection2;
+			var range = GetSelectionRange();
 			try {
-				var font = selection.Font;
+				var font = range.Font;
 				try {
 					font.StrikeThrough = font.StrikeThrough == tomConstants.tomTrue ? tomConstants.tomFalse : tomConstants.tomTrue;
 				}
@@ -322,7 +410,7 @@ namespace EllipticBit.RichEditorNET
 				}
 			}
 			finally {
-				Marshal.ReleaseComObject(selection);
+				Marshal.ReleaseComObject(range);
 			}
 		}
 
@@ -332,9 +420,9 @@ namespace EllipticBit.RichEditorNET
 		/// <param name="color">The color to apply. Use <see cref="Color.Empty"/> to reset to the automatic color.</param>
 		public void SetFontColor(Color color) {
 			if (!EnableFontColor) throw new InvalidOperationException("Font color formatting is disabled.");
-			var selection = TextDocument.Selection2;
+			var range = GetSelectionRange();
 			try {
-				var font = selection.Font;
+				var font = range.Font;
 				try {
 					font.ForeColor = color.IsEmpty ? tomConstants.tomAutoColor : ColorTranslator.ToOle(color);
 				}
@@ -343,7 +431,7 @@ namespace EllipticBit.RichEditorNET
 				}
 			}
 			finally {
-				Marshal.ReleaseComObject(selection);
+				Marshal.ReleaseComObject(range);
 			}
 		}
 
@@ -353,9 +441,9 @@ namespace EllipticBit.RichEditorNET
 		/// <param name="color">The color to apply. Use <see cref="Color.Empty"/> to reset to the automatic color.</param>
 		public void SetBackgroundColor(Color color) {
 			if (!EnableBackgroundColor) throw new InvalidOperationException("Background color formatting is disabled.");
-			var selection = TextDocument.Selection2;
+			var range = GetSelectionRange();
 			try {
-				var font = selection.Font;
+				var font = range.Font;
 				try {
 					font.BackColor = color.IsEmpty ? tomConstants.tomAutoColor : ColorTranslator.ToOle(color);
 				}
@@ -364,7 +452,7 @@ namespace EllipticBit.RichEditorNET
 				}
 			}
 			finally {
-				Marshal.ReleaseComObject(selection);
+				Marshal.ReleaseComObject(range);
 			}
 		}
 
@@ -375,9 +463,9 @@ namespace EllipticBit.RichEditorNET
 		public void SetFontName(string name) {
 			if (!EnableFontName) throw new InvalidOperationException("Font name formatting is disabled.");
 			if (string.IsNullOrEmpty(name)) throw new ArgumentException("Font name cannot be null or empty.", nameof(name));
-			var selection = TextDocument.Selection2;
+			var range = GetSelectionRange();
 			try {
-				var font = selection.Font;
+				var font = range.Font;
 				try {
 					font.Name = name;
 				}
@@ -386,7 +474,7 @@ namespace EllipticBit.RichEditorNET
 				}
 			}
 			finally {
-				Marshal.ReleaseComObject(selection);
+				Marshal.ReleaseComObject(range);
 			}
 		}
 
@@ -397,9 +485,9 @@ namespace EllipticBit.RichEditorNET
 		public void SetFontSize(float size) {
 			if (!EnableFontSize) throw new InvalidOperationException("Font size formatting is disabled.");
 			if (size <= 0) throw new ArgumentOutOfRangeException(nameof(size), "Font size must be greater than zero.");
-			var selection = TextDocument.Selection2;
+			var range = GetSelectionRange();
 			try {
-				var font = selection.Font;
+				var font = range.Font;
 				try {
 					font.Size = size;
 				}
@@ -408,7 +496,7 @@ namespace EllipticBit.RichEditorNET
 				}
 			}
 			finally {
-				Marshal.ReleaseComObject(selection);
+				Marshal.ReleaseComObject(range);
 			}
 		}
 
@@ -419,9 +507,9 @@ namespace EllipticBit.RichEditorNET
 		public void IncreaseFontSize(float points = 1f) {
 			if (!EnableFontSize) throw new InvalidOperationException("Font size formatting is disabled.");
 			if (points <= 0) throw new ArgumentOutOfRangeException(nameof(points), "Point increment must be greater than zero.");
-			var selection = TextDocument.Selection2;
+			var range = GetSelectionRange();
 			try {
-				var font = selection.Font;
+				var font = range.Font;
 				try {
 					font.Size += points;
 				}
@@ -430,7 +518,7 @@ namespace EllipticBit.RichEditorNET
 				}
 			}
 			finally {
-				Marshal.ReleaseComObject(selection);
+				Marshal.ReleaseComObject(range);
 			}
 		}
 
@@ -442,9 +530,9 @@ namespace EllipticBit.RichEditorNET
 		public void DecreaseFontSize(float points = 1f) {
 			if (!EnableFontSize) throw new InvalidOperationException("Font size formatting is disabled.");
 			if (points <= 0) throw new ArgumentOutOfRangeException(nameof(points), "Point decrement must be greater than zero.");
-			var selection = TextDocument.Selection2;
+			var range = GetSelectionRange();
 			try {
-				var font = selection.Font;
+				var font = range.Font;
 				try {
 					float newSize = font.Size - points;
 					font.Size = newSize < 1f ? 1f : newSize;
@@ -454,7 +542,7 @@ namespace EllipticBit.RichEditorNET
 				}
 			}
 			finally {
-				Marshal.ReleaseComObject(selection);
+				Marshal.ReleaseComObject(range);
 			}
 		}
 
@@ -464,9 +552,9 @@ namespace EllipticBit.RichEditorNET
 		/// </summary>
 		public void ToggleSuperscript() {
 			if (!EnableSuperscript) throw new InvalidOperationException("Superscript formatting is disabled.");
-			var selection = TextDocument.Selection2;
+			var range = GetSelectionRange();
 			try {
-				var font = selection.Font;
+				var font = range.Font;
 				try {
 					if (font.Superscript == tomConstants.tomTrue) {
 						font.Superscript = tomConstants.tomFalse;
@@ -481,7 +569,7 @@ namespace EllipticBit.RichEditorNET
 				}
 			}
 			finally {
-				Marshal.ReleaseComObject(selection);
+				Marshal.ReleaseComObject(range);
 			}
 		}
 
@@ -491,9 +579,9 @@ namespace EllipticBit.RichEditorNET
 		/// </summary>
 		public void ToggleSubscript() {
 			if (!EnableSubscript) throw new InvalidOperationException("Subscript formatting is disabled.");
-			var selection = TextDocument.Selection2;
+			var range = GetSelectionRange();
 			try {
-				var font = selection.Font;
+				var font = range.Font;
 				try {
 					if (font.Subscript == tomConstants.tomTrue) {
 						font.Subscript = tomConstants.tomFalse;
@@ -508,7 +596,7 @@ namespace EllipticBit.RichEditorNET
 				}
 			}
 			finally {
-				Marshal.ReleaseComObject(selection);
+				Marshal.ReleaseComObject(range);
 			}
 		}
 
@@ -523,9 +611,9 @@ namespace EllipticBit.RichEditorNET
 		/// <param name="style">The list style to apply.</param>
 		public void ToggleList(ListStyle style) {
 			if (!EnableLists) throw new InvalidOperationException("List formatting is disabled.");
-			var selection = TextDocument.Selection2;
+			var range = GetSelectionRange();
 			try {
-				var para = selection.Para;
+				var para = range.Para;
 				try {
 					int currentType = para.ListType & 0xFFFF;
 					if (currentType == (int)style) {
@@ -545,7 +633,7 @@ namespace EllipticBit.RichEditorNET
 				}
 			}
 			finally {
-				Marshal.ReleaseComObject(selection);
+				Marshal.ReleaseComObject(range);
 			}
 		}
 
@@ -555,9 +643,9 @@ namespace EllipticBit.RichEditorNET
 		/// </summary>
 		public void IncreaseListLevel() {
 			if (!EnableLists) throw new InvalidOperationException("List formatting is disabled.");
-			var selection = TextDocument.Selection2;
+			var range = GetSelectionRange();
 			try {
-				var para = selection.Para;
+				var para = range.Para;
 				try {
 					if (para.ListType != tomConstants.tomListNone) {
 						para.ListLevelIndex++;
@@ -568,7 +656,7 @@ namespace EllipticBit.RichEditorNET
 				}
 			}
 			finally {
-				Marshal.ReleaseComObject(selection);
+				Marshal.ReleaseComObject(range);
 			}
 		}
 
@@ -578,9 +666,9 @@ namespace EllipticBit.RichEditorNET
 		/// </summary>
 		public void DecreaseListLevel() {
 			if (!EnableLists) throw new InvalidOperationException("List formatting is disabled.");
-			var selection = TextDocument.Selection2;
+			var range = GetSelectionRange();
 			try {
-				var para = selection.Para;
+				var para = range.Para;
 				try {
 					if (para.ListType != tomConstants.tomListNone && para.ListLevelIndex > 0) {
 						para.ListLevelIndex--;
@@ -591,7 +679,7 @@ namespace EllipticBit.RichEditorNET
 				}
 			}
 			finally {
-				Marshal.ReleaseComObject(selection);
+				Marshal.ReleaseComObject(range);
 			}
 		}
 
@@ -601,9 +689,9 @@ namespace EllipticBit.RichEditorNET
 		/// <param name="alignment">The alignment to apply.</param>
 		public void SetAlignment(ParagraphAlignment alignment) {
 			if (!EnableAlignment) throw new InvalidOperationException("Paragraph alignment formatting is disabled.");
-			var selection = TextDocument.Selection2;
+			var range = GetSelectionRange();
 			try {
-				var para = selection.Para;
+				var para = range.Para;
 				try {
 					para.Alignment = (int)alignment;
 				}
@@ -612,7 +700,7 @@ namespace EllipticBit.RichEditorNET
 				}
 			}
 			finally {
-				Marshal.ReleaseComObject(selection);
+				Marshal.ReleaseComObject(range);
 			}
 		}
 
@@ -623,9 +711,9 @@ namespace EllipticBit.RichEditorNET
 		public void Indent(float points = 36f) {
 			if (!EnableIndent) throw new InvalidOperationException("Paragraph indentation is disabled.");
 			if (points <= 0) throw new ArgumentOutOfRangeException(nameof(points), "Indent amount must be greater than zero.");
-			var selection = TextDocument.Selection2;
+			var range = GetSelectionRange();
 			try {
-				var para = selection.Para;
+				var para = range.Para;
 				try {
 					para.SetIndents(para.FirstLineIndent, para.LeftIndent + points, para.RightIndent);
 				}
@@ -634,7 +722,7 @@ namespace EllipticBit.RichEditorNET
 				}
 			}
 			finally {
-				Marshal.ReleaseComObject(selection);
+				Marshal.ReleaseComObject(range);
 			}
 		}
 
@@ -646,9 +734,9 @@ namespace EllipticBit.RichEditorNET
 		public void Outdent(float points = 36f) {
 			if (!EnableIndent) throw new InvalidOperationException("Paragraph indentation is disabled.");
 			if (points <= 0) throw new ArgumentOutOfRangeException(nameof(points), "Outdent amount must be greater than zero.");
-			var selection = TextDocument.Selection2;
+			var range = GetSelectionRange();
 			try {
-				var para = selection.Para;
+				var para = range.Para;
 				try {
 					float newLeft = para.LeftIndent - points;
 					para.SetIndents(para.FirstLineIndent, newLeft < 0f ? 0f : newLeft, para.RightIndent);
@@ -658,7 +746,7 @@ namespace EllipticBit.RichEditorNET
 				}
 			}
 			finally {
-				Marshal.ReleaseComObject(selection);
+				Marshal.ReleaseComObject(range);
 			}
 		}
 
@@ -678,22 +766,21 @@ namespace EllipticBit.RichEditorNET
 			if (string.IsNullOrEmpty(displayText))
 				throw new ArgumentException("Display text cannot be null or empty.", nameof(displayText));
 
-			int cpStart;
-			var selection = TextDocument.Selection2;
+			int cpStart = SelectionStart;
+			var range = GetSelectionRange();
 			try {
-				cpStart = selection.Start;
-				selection.TypeText(displayText);
-			}
-			finally {
-				Marshal.ReleaseComObject(selection);
-			}
-
-			var range = TextDocument.Range2(cpStart, cpStart + displayText.Length);
-			try {
-				range.URL = "\"" + url + "\"";
+				range.Text = displayText;
 			}
 			finally {
 				Marshal.ReleaseComObject(range);
+			}
+
+			var linkRange = TextDocument.Range2(cpStart, cpStart + displayText.Length);
+			try {
+				linkRange.URL = "\"" + url + "\"";
+			}
+			finally {
+				Marshal.ReleaseComObject(linkRange);
 			}
 		}
 
@@ -720,12 +807,12 @@ namespace EllipticBit.RichEditorNET
 
 			var comStream = CreateComStream(imageData);
 			try {
-				var selection = TextDocument.Selection2;
+				var range = GetSelectionRange();
 				try {
-					selection.InsertImage(DefaultImageWidth, DefaultImageHeight, 0, 0, altText ?? "", comStream);
+					range.InsertImage(DefaultImageWidth, DefaultImageHeight, 0, 0, altText ?? "", comStream);
 				}
 				finally {
-					Marshal.ReleaseComObject(selection);
+					Marshal.ReleaseComObject(range);
 				}
 			}
 			finally {
@@ -760,22 +847,21 @@ namespace EllipticBit.RichEditorNET
 
 			var comStream = CreateComStream(thumbnailData);
 			try {
-				int cpStart;
-				var selection = TextDocument.Selection2;
+				int cpStart = SelectionStart;
+				var range = GetSelectionRange();
 				try {
-					cpStart = selection.Start;
-					selection.InsertImage(DefaultImageWidth, DefaultImageHeight, 0, 0, altText ?? "", comStream);
-				}
-				finally {
-					Marshal.ReleaseComObject(selection);
-				}
-
-				var range = TextDocument.Range2(cpStart, cpStart + 1);
-				try {
-					range.URL = "\"" + imageUrl + "\"";
+					range.InsertImage(DefaultImageWidth, DefaultImageHeight, 0, 0, altText ?? "", comStream);
 				}
 				finally {
 					Marshal.ReleaseComObject(range);
+				}
+
+				var linkRange = TextDocument.Range2(cpStart, cpStart + 1);
+				try {
+					linkRange.URL = "\"" + imageUrl + "\"";
+				}
+				finally {
+					Marshal.ReleaseComObject(linkRange);
 				}
 			}
 			finally {
