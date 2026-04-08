@@ -7,16 +7,16 @@ namespace EllipticBit.RichEditorNET
 {
 	internal static class ToolbarIcons
 	{
-		private const int Size = 16;
-		private const int IconPadding = 2;
-		internal const int TotalIconSize = Size + IconPadding * 2;
-		private const int RenderSize = 64;
+		private const int DrawArea = 48;
+		private const int DrawPadding = 8;
+		private const int DrawSize = DrawArea + DrawPadding * 2;
+		internal const int TotalIconSize = 20;
 
 		private static Bitmap Create(float scale, Action<Graphics> draw)
 		{
 			int targetSize = Math.Max((int)(TotalIconSize * scale), 1);
-			int renderSize = Math.Max(RenderSize, targetSize);
-			float renderScale = (float)renderSize / TotalIconSize;
+			int renderSize = Math.Max(DrawSize, targetSize);
+			float renderScale = (float)renderSize / DrawSize;
 
 			var hires = new Bitmap(renderSize, renderSize);
 			using (var g = Graphics.FromImage(hires))
@@ -24,7 +24,7 @@ namespace EllipticBit.RichEditorNET
 				g.SmoothingMode = SmoothingMode.AntiAlias;
 				g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
 				g.ScaleTransform(renderScale, renderScale);
-				g.TranslateTransform(IconPadding, IconPadding);
+				g.TranslateTransform(DrawPadding, DrawPadding);
 				draw(g);
 			}
 
@@ -54,7 +54,7 @@ namespace EllipticBit.RichEditorNET
 		{
 			using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
 			{
-				g.DrawString(text, font, brush, new RectangleF(0, 1, Size, Size), sf);
+				g.DrawString(text, font, brush, new RectangleF(0, 3, DrawArea, DrawArea), sf);
 			}
 		}
 
@@ -62,7 +62,7 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var font = new Font("Verdana", 6f, FontStyle.Bold))
+				using (var font = new Font("Verdana", 18f, FontStyle.Bold))
 				using (var brush = new SolidBrush(Color.FromArgb(60, 60, 60)))
 					DrawCenteredText(g, "B", font, brush);
 			});
@@ -72,7 +72,7 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var font = new Font("Verdana", 6f, FontStyle.Italic))
+				using (var font = new Font("Verdana", 18f, FontStyle.Italic))
 				using (var brush = new SolidBrush(Color.FromArgb(60, 60, 60)))
 					DrawCenteredText(g, "I", font, brush);
 			});
@@ -82,12 +82,12 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var font = new Font("Segoe UI", 6f, FontStyle.Regular))
+				using (var font = new Font("Segoe UI", 18f, FontStyle.Regular))
 				using (var brush = new SolidBrush(Color.FromArgb(60, 60, 60)))
 				using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
-					g.DrawString("U", font, brush, new RectangleF(0, 0, Size, Size), sf);
-				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 1.5f))
-					g.DrawLine(pen, 3, 16, 13, 16);
+					g.DrawString("U", font, brush, new RectangleF(0, 0, DrawArea, DrawArea), sf);
+				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 4.5f))
+					g.DrawLine(pen, 9, 48, 39, 48);
 			});
 		}
 
@@ -95,12 +95,12 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var font = new Font("Segoe UI", 6f, FontStyle.Regular))
+				using (var font = new Font("Segoe UI", 18f, FontStyle.Regular))
 				using (var brush = new SolidBrush(Color.FromArgb(60, 60, 60)))
 				using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
-					g.DrawString("U", font, brush, new RectangleF(0, 0, Size, Size), sf);
-				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 1f))
-					g.DrawLine(pen, 2, 16, 14, 16);
+					g.DrawString("U", font, brush, new RectangleF(0, 0, DrawArea, DrawArea), sf);
+				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 3f))
+					g.DrawLine(pen, 6, 48, 42, 48);
 			});
 		}
 
@@ -108,14 +108,14 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var font = new Font("Segoe UI", 6f, FontStyle.Regular))
+				using (var font = new Font("Segoe UI", 18f, FontStyle.Regular))
 				using (var brush = new SolidBrush(Color.FromArgb(60, 60, 60)))
 				using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
-					g.DrawString("U", font, brush, new RectangleF(0, 0, Size, Size), sf);
-				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 1f))
+					g.DrawString("U", font, brush, new RectangleF(0, 0, DrawArea, DrawArea), sf);
+				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 3f))
 				{
-					g.DrawLine(pen, 2, 16, 14, 16);
-					g.DrawLine(pen, 2, 14, 14, 14);
+					g.DrawLine(pen, 6, 48, 42, 48);
+					g.DrawLine(pen, 6, 42, 42, 42);
 				}
 			});
 		}
@@ -124,12 +124,12 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var font = new Font("Segoe UI", 6f, FontStyle.Regular))
+				using (var font = new Font("Segoe UI", 18f, FontStyle.Regular))
 				using (var brush = new SolidBrush(Color.FromArgb(60, 60, 60)))
 				using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
-					g.DrawString("U", font, brush, new RectangleF(0, 0, Size, Size), sf);
-				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 1f) { DashStyle = DashStyle.Dot })
-					g.DrawLine(pen, 2, 16, 14, 16);
+					g.DrawString("U", font, brush, new RectangleF(0, 0, DrawArea, DrawArea), sf);
+				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 3f) { DashStyle = DashStyle.Dot })
+					g.DrawLine(pen, 6, 48, 42, 48);
 			});
 		}
 
@@ -137,12 +137,12 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var font = new Font("Segoe UI", 6f, FontStyle.Regular))
+				using (var font = new Font("Segoe UI", 18f, FontStyle.Regular))
 				using (var brush = new SolidBrush(Color.FromArgb(60, 60, 60)))
 				using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
-					g.DrawString("U", font, brush, new RectangleF(0, 0, Size, Size), sf);
-				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 1f) { DashStyle = DashStyle.Dash })
-					g.DrawLine(pen, 2, 16, 14, 16);
+					g.DrawString("U", font, brush, new RectangleF(0, 0, DrawArea, DrawArea), sf);
+				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 3f) { DashStyle = DashStyle.Dash })
+					g.DrawLine(pen, 6, 48, 42, 48);
 			});
 		}
 
@@ -150,16 +150,16 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var font = new Font("Segoe UI", 6f, FontStyle.Regular))
+				using (var font = new Font("Segoe UI", 18f, FontStyle.Regular))
 				using (var brush = new SolidBrush(Color.FromArgb(60, 60, 60)))
 				using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
-					g.DrawString("U", font, brush, new RectangleF(0, 0, Size, Size), sf);
+					g.DrawString("U", font, brush, new RectangleF(0, 0, DrawArea, DrawArea), sf);
 				var color = Color.FromArgb(60, 60, 60);
-				using (var pen = new Pen(color, 1f))
+				using (var pen = new Pen(color, 3f))
 				{
 					var points = new[] {
-						new PointF(2, 16), new PointF(4, 14), new PointF(6, 16), new PointF(8, 14),
-						new PointF(10, 16), new PointF(12, 14), new PointF(14, 16)
+						new PointF(6, 48), new PointF(12, 42), new PointF(18, 48), new PointF(24, 42),
+						new PointF(30, 48), new PointF(36, 42), new PointF(42, 48)
 					};
 					g.DrawCurve(pen, points, 0.5f);
 				}
@@ -170,11 +170,11 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var font = new Font("Segoe UI", 4f, FontStyle.Regular))
+				using (var font = new Font("Segoe UI", 12f, FontStyle.Regular))
 				using (var brush = new SolidBrush(Color.FromArgb(60, 60, 60)))
 					DrawCenteredText(g, "ab", font, brush);
-				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 1.5f))
-					g.DrawLine(pen, 2, 10, 14, 10);
+				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 4.5f))
+					g.DrawLine(pen, 6, 30, 42, 30);
 			});
 		}
 
@@ -182,12 +182,12 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var font = new Font("Segoe UI", 6f, FontStyle.Regular))
-				using (var small = new Font("Segoe UI", 3f, FontStyle.Regular))
+				using (var font = new Font("Segoe UI", 18f, FontStyle.Regular))
+				using (var small = new Font("Segoe UI", 9f, FontStyle.Regular))
 				using (var brush = new SolidBrush(Color.FromArgb(60, 60, 60)))
 				{
-					g.DrawString("a", font, brush, 0, -4);
-					g.DrawString("2", small, brush, 9, 8);
+					g.DrawString("x", font, brush, 0, -12);
+					g.DrawString("2", small, brush, 27, 26);
 				}
 			});
 		}
@@ -196,12 +196,12 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var font = new Font("Segoe UI", 6f, FontStyle.Regular))
-				using (var small = new Font("Segoe UI", 3f, FontStyle.Regular))
+				using (var font = new Font("Segoe UI", 18f, FontStyle.Regular))
+				using (var small = new Font("Segoe UI", 9f, FontStyle.Regular))
 				using (var brush = new SolidBrush(Color.FromArgb(60, 60, 60)))
 				{
-					g.DrawString("a", font, brush, 0, -4);
-					g.DrawString("2", small, brush, 9, -3);
+					g.DrawString("x", font, brush, 0, -12);
+					g.DrawString("2", small, brush, 27, -11);
 				}
 			});
 		}
@@ -210,11 +210,11 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var font = new Font("Segoe UI", 5.5f, FontStyle.Regular))
+				using (var font = new Font("Segoe UI", 16.5f, FontStyle.Regular))
 				using (var brush = new SolidBrush(Color.FromArgb(60, 60, 60)))
-					g.DrawString("A", font, brush, 1, -4);
+					g.DrawString("A", font, brush, 3, -12);
 				using (var brush = new SolidBrush(Color.Red))
-					g.FillRectangle(brush, 1, 13, 14, 3);
+					g.FillRectangle(brush, 3, 39, 42, 9);
 			});
 		}
 
@@ -223,15 +223,15 @@ namespace EllipticBit.RichEditorNET
 			return Create(scale, g =>
 			{
 				using (var bgBrush = new SolidBrush(Color.Yellow))
-					g.FillRectangle(bgBrush, 1, 1, 14, 14);
-				using (var font = new Font("Segoe UI", 4f, FontStyle.Regular))
+					g.FillRectangle(bgBrush, 3, 3, 42, 42);
+				using (var font = new Font("Segoe UI", 12f, FontStyle.Regular))
 				using (var brush = new SolidBrush(Color.FromArgb(60, 60, 60)))
 				{
 					using (var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
-						g.DrawString("ab", font, brush, new RectangleF(0, 0, Size, Size), sf);
+						g.DrawString("ab", font, brush, new RectangleF(0, 0, DrawArea, DrawArea), sf);
 				}
-				using (var pen = new Pen(Color.FromArgb(120, 120, 120), 1f))
-					g.DrawRectangle(pen, 0, 0, 15, 15);
+				using (var pen = new Pen(Color.FromArgb(120, 120, 120), 3f))
+					g.DrawRectangle(pen, 0, 0, 45, 45);
 			});
 		}
 
@@ -239,12 +239,12 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 1.5f))
+				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 4.5f))
 				{
-					g.DrawLine(pen, 2, 3, 14, 3);
-					g.DrawLine(pen, 2, 6, 10, 6);
-					g.DrawLine(pen, 2, 9, 13, 9);
-					g.DrawLine(pen, 2, 12, 9, 12);
+					g.DrawLine(pen, 6, 9, 42, 9);
+					g.DrawLine(pen, 6, 18, 30, 18);
+					g.DrawLine(pen, 6, 27, 39, 27);
+					g.DrawLine(pen, 6, 36, 27, 36);
 				}
 			});
 		}
@@ -253,12 +253,12 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 1.5f))
+				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 4.5f))
 				{
-					g.DrawLine(pen, 2, 3, 14, 3);
-					g.DrawLine(pen, 4, 6, 12, 6);
-					g.DrawLine(pen, 3, 9, 13, 9);
-					g.DrawLine(pen, 5, 12, 11, 12);
+					g.DrawLine(pen, 6, 9, 42, 9);
+					g.DrawLine(pen, 12, 18, 36, 18);
+					g.DrawLine(pen, 9, 27, 39, 27);
+					g.DrawLine(pen, 15, 36, 33, 36);
 				}
 			});
 		}
@@ -267,12 +267,12 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 1.5f))
+				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 4.5f))
 				{
-					g.DrawLine(pen, 2, 3, 14, 3);
-					g.DrawLine(pen, 6, 6, 14, 6);
-					g.DrawLine(pen, 3, 9, 14, 9);
-					g.DrawLine(pen, 7, 12, 14, 12);
+					g.DrawLine(pen, 6, 9, 42, 9);
+					g.DrawLine(pen, 18, 18, 42, 18);
+					g.DrawLine(pen, 9, 27, 42, 27);
+					g.DrawLine(pen, 21, 36, 42, 36);
 				}
 			});
 		}
@@ -281,12 +281,12 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 1.5f))
+				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 4.5f))
 				{
-					g.DrawLine(pen, 2, 3, 14, 3);
-					g.DrawLine(pen, 2, 6, 14, 6);
-					g.DrawLine(pen, 2, 9, 14, 9);
-					g.DrawLine(pen, 2, 12, 14, 12);
+					g.DrawLine(pen, 6, 9, 42, 9);
+					g.DrawLine(pen, 6, 18, 42, 18);
+					g.DrawLine(pen, 6, 27, 42, 27);
+					g.DrawLine(pen, 6, 36, 42, 36);
 				}
 			});
 		}
@@ -295,13 +295,13 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var font = new Font("Segoe UI", 6f, FontStyle.Regular))
+				using (var font = new Font("Segoe UI", 18f, FontStyle.Regular))
 				using (var brush = new SolidBrush(Color.FromArgb(60, 60, 60)))
-					g.DrawString("A", font, brush, -2, -2);
-				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 1f))
+					g.DrawString("A", font, brush, -6, -6);
+				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 3f))
 				{
-					g.DrawLine(pen, 12, 2, 12, 8);
-					g.DrawLine(pen, 9, 5, 15, 5);
+					g.DrawLine(pen, 36, 6, 36, 24);
+					g.DrawLine(pen, 27, 15, 45, 15);
 				}
 			});
 		}
@@ -310,11 +310,11 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var font = new Font("Segoe UI", 5f, FontStyle.Regular))
+				using (var font = new Font("Segoe UI", 15f, FontStyle.Regular))
 				using (var brush = new SolidBrush(Color.FromArgb(60, 60, 60)))
-					g.DrawString("A", font, brush, -2, 0);
-				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 1.5f))
-					g.DrawLine(pen, 10, 5, 15, 5);
+					g.DrawString("A", font, brush, -6, 0);
+				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 4.5f))
+					g.DrawLine(pen, 30, 15, 45, 15);
 			});
 		}
 
@@ -322,15 +322,15 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var pen = new Pen(Color.FromArgb(0, 102, 204), 1.5f))
+				using (var pen = new Pen(Color.FromArgb(0, 102, 204), 4.5f))
 				{
-					g.DrawArc(pen, 1, 4, 8, 8, 90, 180);
-					g.DrawLine(pen, 5, 4, 8, 4);
-					g.DrawLine(pen, 5, 12, 8, 12);
+					g.DrawArc(pen, 3, 12, 24, 24, 90, 180);
+					g.DrawLine(pen, 15, 12, 24, 12);
+					g.DrawLine(pen, 15, 36, 24, 36);
 
-					g.DrawArc(pen, 7, 4, 8, 8, -90, 180);
-					g.DrawLine(pen, 8, 4, 11, 4);
-					g.DrawLine(pen, 8, 12, 11, 12);
+					g.DrawArc(pen, 21, 12, 24, 24, -90, 180);
+					g.DrawLine(pen, 24, 12, 33, 12);
+					g.DrawLine(pen, 24, 36, 33, 36);
 				}
 			});
 		}
@@ -339,18 +339,18 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 1f))
-					g.DrawRectangle(pen, 1, 2, 13, 11);
+				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 3f))
+					g.DrawRectangle(pen, 3, 6, 39, 33);
 
 				using (var brush = new SolidBrush(Color.FromArgb(135, 206, 250)))
-					g.FillRectangle(brush, 2, 3, 12, 10);
+					g.FillRectangle(brush, 6, 9, 36, 30);
 
 				using (var brush = new SolidBrush(Color.FromArgb(255, 200, 0)))
-					g.FillEllipse(brush, 3, 4, 4, 4);
+					g.FillEllipse(brush, 9, 12, 12, 12);
 
 				using (var brush = new SolidBrush(Color.FromArgb(76, 153, 0)))
 				{
-					var points = new[] { new Point(2, 13), new Point(6, 8), new Point(9, 11), new Point(11, 9), new Point(14, 13) };
+					var points = new[] { new Point(6, 39), new Point(18, 24), new Point(27, 33), new Point(33, 27), new Point(42, 39) };
 					g.FillPolygon(brush, points);
 				}
 			});
@@ -360,24 +360,24 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 1f))
-					g.DrawRectangle(pen, 1, 2, 10, 9);
+				using (var pen = new Pen(Color.FromArgb(60, 60, 60), 3f))
+					g.DrawRectangle(pen, 3, 6, 30, 27);
 
 				using (var brush = new SolidBrush(Color.FromArgb(135, 206, 250)))
-					g.FillRectangle(brush, 2, 3, 9, 8);
+					g.FillRectangle(brush, 6, 9, 27, 24);
 
 				using (var brush = new SolidBrush(Color.FromArgb(76, 153, 0)))
 				{
-					var points = new[] { new Point(2, 11), new Point(5, 7), new Point(7, 9), new Point(9, 7), new Point(11, 11) };
+					var points = new[] { new Point(6, 33), new Point(15, 21), new Point(21, 27), new Point(27, 21), new Point(33, 33) };
 					g.FillPolygon(brush, points);
 				}
 
-				using (var pen = new Pen(Color.FromArgb(0, 102, 204), 1.5f))
+				using (var pen = new Pen(Color.FromArgb(0, 102, 204), 4.5f))
 				{
-					g.DrawArc(pen, 10, 9, 4, 5, 90, 180);
-					g.DrawLine(pen, 12, 9, 13, 9);
-					g.DrawLine(pen, 12, 14, 13, 14);
-					g.DrawArc(pen, 12, 9, 4, 5, -90, 180);
+					g.DrawArc(pen, 30, 27, 12, 15, 90, 180);
+					g.DrawLine(pen, 36, 27, 39, 27);
+					g.DrawLine(pen, 36, 42, 39, 42);
+					g.DrawArc(pen, 36, 27, 12, 15, -90, 180);
 				}
 			});
 		}
@@ -386,27 +386,16 @@ namespace EllipticBit.RichEditorNET
 		{
 			return Create(scale, g =>
 			{
-				var bulletColor = Color.FromArgb(60, 60, 60);
-				var lineColor = Color.FromArgb(100, 100, 100);
-				using (var bulletBrush = new SolidBrush(bulletColor))
-				using (var linePen = new Pen(lineColor, 1.5f)) {
-					g.Clear(Color.Transparent);
-					g.SmoothingMode = SmoothingMode.AntiAlias;
-					g.FillEllipse(Brushes.Black, 1, 2, 3, 3);
-					g.DrawLine(Pens.Black, 6, 3, 14, 3);
-					g.FillEllipse(Brushes.Black, 1, 7, 3, 3);
-					g.DrawLine(Pens.Black, 6, 8, 14, 8);
-					g.FillEllipse(Brushes.Black, 1, 12, 3, 3);
-					g.DrawLine(Pens.Black, 6, 13, 14, 13);
-
-					//g.FillEllipse(bulletBrush, 2, 2, 3, 3);
-					//g.DrawLine(linePen, 7, 3, 14, 3);
-
-					//g.FillEllipse(bulletBrush, 2, 6, 3, 3);
-					//g.DrawLine(linePen, 7, 7, 14, 7);
-
-					//g.FillEllipse(bulletBrush, 2, 10, 3, 3);
-					//g.DrawLine(linePen, 7, 11, 14, 11);
+				var color = Color.FromArgb(60, 60, 60);
+				using (var bulletBrush = new SolidBrush(color))
+				using (var linePen = new Pen(color, 4.5f))
+				{
+					g.FillEllipse(bulletBrush, 3, 6, 9, 9);
+					g.DrawLine(linePen, 18, 9, 42, 9);
+					g.FillEllipse(bulletBrush, 3, 21, 9, 9);
+					g.DrawLine(linePen, 18, 24, 42, 24);
+					g.FillEllipse(bulletBrush, 3, 36, 9, 9);
+					g.DrawLine(linePen, 18, 39, 42, 39);
 				}
 			});
 		}
@@ -417,18 +406,18 @@ namespace EllipticBit.RichEditorNET
 			{
 				var textColor = Color.FromArgb(60, 60, 60);
 				var lineColor = Color.FromArgb(100, 100, 100);
-				using (var font = new Font("Segoe UI", 2f, FontStyle.Bold))
+				using (var font = new Font("Segoe UI", 6f, FontStyle.Bold))
 				using (var brush = new SolidBrush(textColor))
-				using (var linePen = new Pen(lineColor, 2f))
+				using (var linePen = new Pen(lineColor, 6f))
 				{
 					g.DrawString("1", font, brush, 0, 0);
-					g.DrawLine(linePen, 6, 3, 14, 3);
+					g.DrawLine(linePen, 18, 9, 42, 9);
 
-					g.DrawString("2", font, brush, 0, 5);
-					g.DrawLine(linePen, 6, 8, 14, 8);
+					g.DrawString("2", font, brush, 0, 15);
+					g.DrawLine(linePen, 18, 24, 42, 24);
 
-					g.DrawString("3", font, brush, 0, 10);
-					g.DrawLine(linePen, 6, 13, 14, 13);
+					g.DrawString("3", font, brush, 0, 30);
+					g.DrawLine(linePen, 18, 39, 42, 39);
 				}
 			});
 		}
