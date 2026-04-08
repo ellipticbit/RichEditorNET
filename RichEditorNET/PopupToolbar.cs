@@ -18,6 +18,7 @@ namespace EllipticBit.RichEditorNET
 		private Point _targetScreenPoint;
 		private bool _shown;
 		private int _blockingOperations;
+		private int _showGeneration;
 
 		private ToolStripComboBox _fontCombo;
 		private ToolStripComboBox _sizeCombo;
@@ -71,6 +72,7 @@ namespace EllipticBit.RichEditorNET
 
 		internal void ShowAt(Point screenPoint)
 		{
+			_showGeneration++;
 			_targetScreenPoint = screenPoint;
 
 			if (!_shown)
@@ -110,9 +112,10 @@ namespace EllipticBit.RichEditorNET
 		{
 			base.OnDeactivate(e);
 			if (_blockingOperations > 0) return;
+			int gen = _showGeneration;
 			BeginInvoke(new Action(() =>
 			{
-				if (_blockingOperations == 0 && !Disposing && !IsDisposed)
+				if (gen == _showGeneration && _blockingOperations == 0 && !Disposing && !IsDisposed)
 					Hide();
 			}));
 		}

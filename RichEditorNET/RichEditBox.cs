@@ -182,6 +182,7 @@ namespace EllipticBit.RichEditorNET
 		private ITextDocument2? _textDocument;
 		private PopupToolbar? _activeToolbar;
 		private ToolbarIconCache? _iconCache;
+		private bool _spellCheckMenuShown;
 
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -284,7 +285,31 @@ namespace EllipticBit.RichEditorNET
 		protected override void WndProc(ref Message m)
 		{
 			if (m.Msg == PInvoke.WM_CONTEXTMENU)
+			{
+				if (_activeToolbar != null && _activeToolbar.Visible)
+					_activeToolbar.Hide();
+
+				if (_enableSpellCheck)
+				{
+					_spellCheckMenuShown = false;
+					base.WndProc(ref m);
+					if (_spellCheckMenuShown)
+						return;
+				}
+
+				long lp = m.LParam.ToInt64();
+				int x = (short)(lp & 0xFFFF);
+				int y = (short)((lp >> 16) & 0xFFFF);
+				Point screenPoint = (x == -1 && y == -1)
+					? PointToScreen(GetPositionFromCharIndex(SelectionStart))
+					: new Point(x, y);
+				ShowPopupToolbar(screenPoint);
 				return;
+			}
+
+			if (m.Msg == PInvoke.WM_ENTERMENULOOP)
+				_spellCheckMenuShown = true;
+
 			base.WndProc(ref m);
 		}
 
@@ -298,7 +323,6 @@ namespace EllipticBit.RichEditorNET
 					SelectionStart = charIndex;
 					SelectionLength = 0;
 				}
-				ShowPopupToolbar(PointToScreen(e.Location));
 				return;
 			}
 
