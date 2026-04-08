@@ -12,20 +12,16 @@ namespace EllipticBit.RichEditorNET
 {
 	public class RichEditBox : RichTextBox
 	{
-		static RichEditBox()
-		{
+		static RichEditBox() {
 			PInvoke.LoadLibrary(PInvoke.MSFTEDIT_DLL);
 		}
 
-		public RichEditBox()
-		{
+		public RichEditBox() {
 			HideSelection = false;
 		}
 
-		protected override CreateParams CreateParams
-		{
-			get
-			{
+		protected override CreateParams CreateParams {
+			get {
 				var cp = base.CreateParams;
 				cp.ClassName = PInvoke.RICHEDIT_CLASS;
 				return cp;
@@ -37,46 +33,69 @@ namespace EllipticBit.RichEditorNET
 		[DefaultValue(true)]
 		[Category("Behavior")]
 		[Description("Enables or disables the system spell checker for this editor.")]
-		public bool EnableSpellCheck
-		{
+		public bool EnableSpellCheck {
 			get => _enableSpellCheck;
-			set
-			{
+			set {
 				_enableSpellCheck = value;
 				if (IsHandleCreated) {
 					ApplySpellCheckOption();
 				}
 			}
 		}
+
 		private bool _enableSpellCheck = true;
 
 		[DefaultValue(320)]
 		[Category("Behavior")]
 		[Description("Default display width in pixels for inserted images.")]
-		public int DefaultImageWidth
-		{
+		public int DefaultImageWidth {
 			get => _defaultImageWidth;
-			set
-			{
+			set {
 				if (value <= 0) throw new ArgumentOutOfRangeException(nameof(value), "Width must be greater than zero.");
 				_defaultImageWidth = value;
 			}
 		}
+
 		private int _defaultImageWidth = 320;
 
 		[DefaultValue(240)]
 		[Category("Behavior")]
 		[Description("Default display height in pixels for inserted images.")]
-		public int DefaultImageHeight
-		{
+		public int DefaultImageHeight {
 			get => _defaultImageHeight;
-			set
-			{
+			set {
 				if (value <= 0) throw new ArgumentOutOfRangeException(nameof(value), "Height must be greater than zero.");
 				_defaultImageHeight = value;
 			}
 		}
+
 		private int _defaultImageHeight = 240;
+
+		[DefaultValue(false)]
+		[Category("Behavior")]
+		[Description("Enables CommonMark Markdown mode. Disables formatting options not available in CommonMark.")]
+		public bool EnableCommonMarkdown {
+			get => _enableCommonMarkdown;
+			set {
+				_enableCommonMarkdown = value;
+				if (!value) _enableGithubMarkdown = false;
+			}
+		}
+
+		private bool _enableCommonMarkdown;
+
+		[DefaultValue(false)]
+		[Category("Behavior")]
+		[Description("Enables GitHub Flavored Markdown mode. Implies EnableCommonMarkdown. Disables formatting options not available in GitHub Flavored Markdown.")]
+		public bool EnableGithubMarkdown {
+			get => _enableGithubMarkdown;
+			set {
+				_enableGithubMarkdown = value;
+				if (value) _enableCommonMarkdown = true;
+			}
+		}
+
+		private bool _enableGithubMarkdown;
 
 		[DefaultValue(true)]
 		[Category("Behavior")]
@@ -91,42 +110,82 @@ namespace EllipticBit.RichEditorNET
 		[DefaultValue(true)]
 		[Category("Behavior")]
 		[Description("Enables or disables underline formatting.")]
-		public bool EnableUnderline { get; set; } = true;
+		public bool EnableUnderline {
+			get => _enableUnderline && !_enableCommonMarkdown;
+			set => _enableUnderline = value;
+		}
+
+		private bool _enableUnderline = true;
 
 		[DefaultValue(true)]
 		[Category("Behavior")]
 		[Description("Enables or disables strikethrough formatting.")]
-		public bool EnableStrikeThrough { get; set; } = true;
+		public bool EnableStrikeThrough {
+			get => _enableStrikeThrough && (!_enableCommonMarkdown || _enableGithubMarkdown);
+			set => _enableStrikeThrough = value;
+		}
+
+		private bool _enableStrikeThrough = true;
 
 		[DefaultValue(true)]
 		[Category("Behavior")]
 		[Description("Enables or disables font color formatting.")]
-		public bool EnableFontColor { get; set; } = true;
+		public bool EnableFontColor {
+			get => _enableFontColor && !_enableCommonMarkdown;
+			set => _enableFontColor = value;
+		}
+
+		private bool _enableFontColor = true;
 
 		[DefaultValue(true)]
 		[Category("Behavior")]
 		[Description("Enables or disables background color formatting.")]
-		public bool EnableBackgroundColor { get; set; } = true;
+		public bool EnableBackgroundColor {
+			get => _enableBackgroundColor && !_enableCommonMarkdown;
+			set => _enableBackgroundColor = value;
+		}
+
+		private bool _enableBackgroundColor = true;
 
 		[DefaultValue(true)]
 		[Category("Behavior")]
 		[Description("Enables or disables font name formatting.")]
-		public bool EnableFontName { get; set; } = true;
+		public bool EnableFontName {
+			get => _enableFontName && !_enableCommonMarkdown;
+			set => _enableFontName = value;
+		}
+
+		private bool _enableFontName = true;
 
 		[DefaultValue(true)]
 		[Category("Behavior")]
 		[Description("Enables or disables font size formatting.")]
-		public bool EnableFontSize { get; set; } = true;
+		public bool EnableFontSize {
+			get => _enableFontSize && !_enableCommonMarkdown;
+			set => _enableFontSize = value;
+		}
+
+		private bool _enableFontSize = true;
 
 		[DefaultValue(true)]
 		[Category("Behavior")]
 		[Description("Enables or disables superscript formatting.")]
-		public bool EnableSuperscript { get; set; } = true;
+		public bool EnableSuperscript {
+			get => _enableSuperscript && !_enableCommonMarkdown;
+			set => _enableSuperscript = value;
+		}
+
+		private bool _enableSuperscript = true;
 
 		[DefaultValue(true)]
 		[Category("Behavior")]
 		[Description("Enables or disables subscript formatting.")]
-		public bool EnableSubscript { get; set; } = true;
+		public bool EnableSubscript {
+			get => _enableSubscript && !_enableCommonMarkdown;
+			set => _enableSubscript = value;
+		}
+
+		private bool _enableSubscript = true;
 
 		[DefaultValue(true)]
 		[Category("Behavior")]
@@ -136,12 +195,22 @@ namespace EllipticBit.RichEditorNET
 		[DefaultValue(true)]
 		[Category("Behavior")]
 		[Description("Enables or disables paragraph alignment formatting.")]
-		public bool EnableAlignment { get; set; } = true;
+		public bool EnableAlignment {
+			get => _enableAlignment && !_enableCommonMarkdown;
+			set => _enableAlignment = value;
+		}
+
+		private bool _enableAlignment = true;
 
 		[DefaultValue(true)]
 		[Category("Behavior")]
 		[Description("Enables or disables paragraph indentation.")]
-		public bool EnableIndent { get; set; } = true;
+		public bool EnableIndent {
+			get => _enableIndent && !_enableCommonMarkdown;
+			set => _enableIndent = value;
+		}
+
+		private bool _enableIndent = true;
 
 		[DefaultValue(true)]
 		[Category("Behavior")]
@@ -188,6 +257,17 @@ namespace EllipticBit.RichEditorNET
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public ITextDocument2 TextDocument => _textDocument ?? throw new InvalidOperationException("The control handle has not been created.");
 
+		/// <summary>
+		/// Gets or sets the document content as a markdown string. The flavor is determined by
+		/// <see cref="EnableCommonMarkdown"/> and <see cref="EnableGithubMarkdown"/>.
+		/// </summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public string Markdown {
+			get => MarkdownFormatter.ToMarkdown(TextDocument, EnableGithubMarkdown);
+			set => MarkdownFormatter.FromMarkdown(TextDocument, value, EnableGithubMarkdown);
+		}
+
 		internal void RaiseInsertHyperlinkClicked() => InsertHyperlinkClicked?.Invoke(this, EventArgs.Empty);
 		internal void RaiseInsertImageClicked() => InsertImageClicked?.Invoke(this, EventArgs.Empty);
 		internal void RaiseInsertLinkedThumbnailClicked() => InsertLinkedThumbnailClicked?.Invoke(this, EventArgs.Empty);
@@ -203,14 +283,12 @@ namespace EllipticBit.RichEditorNET
 
 		#region - Control Behaviors -
 
-		protected override void OnHandleCreated(EventArgs e)
-		{
+		protected override void OnHandleCreated(EventArgs e) {
 			base.OnHandleCreated(e);
 
 			IntPtr pOle = IntPtr.Zero;
 			PInvoke.SendMessage(Handle, PInvoke.EM_GETOLEINTERFACE, IntPtr.Zero, ref pOle);
-			if (pOle != IntPtr.Zero)
-			{
+			if (pOle != IntPtr.Zero) {
 				_textDocument = Marshal.GetObjectForIUnknown(pOle) as ITextDocument2;
 				Marshal.Release(pOle);
 			}
@@ -219,22 +297,18 @@ namespace EllipticBit.RichEditorNET
 			ApplySpellCheckOption();
 		}
 
-		protected override void OnHandleDestroyed(EventArgs e)
-		{
-			if (_activeToolbar != null)
-			{
+		protected override void OnHandleDestroyed(EventArgs e) {
+			if (_activeToolbar != null) {
 				_activeToolbar.Dispose();
 				_activeToolbar = null;
 			}
 
-			if (_iconCache != null)
-			{
+			if (_iconCache != null) {
 				_iconCache.Dispose();
 				_iconCache = null;
 			}
 
-			if (_textDocument != null)
-			{
+			if (_textDocument != null) {
 				Marshal.ReleaseComObject(_textDocument);
 				_textDocument = null;
 			}
@@ -242,19 +316,16 @@ namespace EllipticBit.RichEditorNET
 			base.OnHandleDestroyed(e);
 		}
 
-		protected override void OnDoubleClick(EventArgs e)
-		{
+		protected override void OnDoubleClick(EventArgs e) {
 			base.OnDoubleClick(e);
 
 			string selected = SelectedText;
-			if (selected.Length > 0 && char.IsWhiteSpace(selected[selected.Length - 1]))
-			{
+			if (selected.Length > 0 && char.IsWhiteSpace(selected[selected.Length - 1])) {
 				base.SelectionLength = selected.TrimEnd().Length;
 			}
 		}
 
-		private void ApplySpellCheckOption()
-		{
+		private void ApplySpellCheckOption() {
 			var options = (int)PInvoke.SendMessage(Handle, PInvoke.EM_GETLANGOPTIONS, IntPtr.Zero, IntPtr.Zero);
 			if (_enableSpellCheck)
 				options |= PInvoke.IMF_SPELLCHECKING;
@@ -263,34 +334,27 @@ namespace EllipticBit.RichEditorNET
 			PInvoke.SendMessage(Handle, PInvoke.EM_SETLANGOPTIONS, IntPtr.Zero, (IntPtr)options);
 		}
 
-		protected override void OnMouseUp(MouseEventArgs e)
-		{
+		protected override void OnMouseUp(MouseEventArgs e) {
 			base.OnMouseUp(e);
 
-			if (e.Button == MouseButtons.Left && ModifierKeys.HasFlag(Keys.Control))
-			{
+			if (e.Button == MouseButtons.Left && ModifierKeys.HasFlag(Keys.Control)) {
 				PInvoke.SendMessage(Handle, PInvoke.EM_SETOPTIONS, (IntPtr)PInvoke.ECOOP_AND, (IntPtr)(~PInvoke.ECO_AUTOWORDSELECTION));
 
-				if (base.SelectionLength > 0)
-				{
+				if (base.SelectionLength > 0) {
 					string selected = SelectedText;
-					if (selected.Length > 0 && char.IsWhiteSpace(selected[selected.Length - 1]))
-					{
+					if (selected.Length > 0 && char.IsWhiteSpace(selected[selected.Length - 1])) {
 						base.SelectionLength = selected.TrimEnd().Length;
 					}
 				}
 			}
 		}
 
-		protected override void WndProc(ref Message m)
-		{
-			if (m.Msg == PInvoke.WM_CONTEXTMENU)
-			{
+		protected override void WndProc(ref Message m) {
+			if (m.Msg == PInvoke.WM_CONTEXTMENU) {
 				if (_activeToolbar != null && _activeToolbar.Visible)
 					_activeToolbar.Hide();
 
-				if (_enableSpellCheck)
-				{
+				if (_enableSpellCheck) {
 					_spellCheckMenuShown = false;
 					base.WndProc(ref m);
 					if (_spellCheckMenuShown)
@@ -313,40 +377,34 @@ namespace EllipticBit.RichEditorNET
 			base.WndProc(ref m);
 		}
 
-		protected override void OnMouseDown(MouseEventArgs e)
-		{
-			if (e.Button == MouseButtons.Right)
-			{
+		protected override void OnMouseDown(MouseEventArgs e) {
+			if (e.Button == MouseButtons.Right) {
 				int charIndex = GetCharIndexFromPosition(e.Location);
-				if (SelectionLength == 0 || charIndex < SelectionStart || charIndex >= SelectionStart + SelectionLength)
-				{
+				if (SelectionLength == 0 || charIndex < SelectionStart || charIndex >= SelectionStart + SelectionLength) {
 					SelectionStart = charIndex;
 					SelectionLength = 0;
 				}
+
 				return;
 			}
 
-			if (e.Button == MouseButtons.Left && ModifierKeys.HasFlag(Keys.Control))
-			{
+			if (e.Button == MouseButtons.Left && ModifierKeys.HasFlag(Keys.Control)) {
 				PInvoke.SendMessage(Handle, PInvoke.EM_SETOPTIONS, (IntPtr)PInvoke.ECOOP_OR, (IntPtr)PInvoke.ECO_AUTOWORDSELECTION);
 			}
 
 			base.OnMouseDown(e);
 		}
 
-		private void ShowPopupToolbar(Point screenLocation)
-		{
+		private void ShowPopupToolbar(Point screenLocation) {
 			float currentScale = DeviceDpi / 96f;
-			if (_iconCache == null || _iconCache.DpiScale != currentScale)
-			{
+			if (_iconCache == null || _iconCache.DpiScale != currentScale) {
 				_activeToolbar?.Dispose();
 				_activeToolbar = null;
 				_iconCache?.Dispose();
 				_iconCache = new ToolbarIconCache(currentScale);
 			}
 
-			if (_activeToolbar == null)
-			{
+			if (_activeToolbar == null) {
 				_activeToolbar = new PopupToolbar(this, _iconCache);
 			}
 
@@ -649,6 +707,7 @@ namespace EllipticBit.RichEditorNET
 						if (style != ListStyle.Bullet) {
 							listType |= tomConstants.tomListPeriod;
 						}
+
 						para.ListType = listType;
 					}
 				}
@@ -893,6 +952,22 @@ namespace EllipticBit.RichEditorNET
 			}
 		}
 
+		/// <summary>
+		/// Gets the alt text for the image at the current selection position.
+		/// Returns an empty string if the selection is not positioned on an image
+		/// or the image has no alt text.
+		/// </summary>
+		public string GetImageAltText() {
+			var range = TextDocument.Range2(SelectionStart, SelectionStart + 1);
+			try {
+				if (range.Char != 0xFFFC) return string.Empty;
+				return range.GetText2(tomConstants.tomTextize) ?? string.Empty;
+			}
+			finally {
+				Marshal.ReleaseComObject(range);
+			}
+		}
+
 		private static ImageFormat GetImageFormat(Image image) {
 			if (image.RawFormat.Guid == ImageFormat.Jpeg.Guid) return ImageFormat.Jpeg;
 			if (image.RawFormat.Guid == ImageFormat.Png.Guid) return ImageFormat.Png;
@@ -927,13 +1002,13 @@ namespace EllipticBit.RichEditorNET
 		#endregion
 
 		#region - Hidden Properties -
+
 		// Hide RTF properties
 
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		private new string? Rtf
-		{
+		private new string? Rtf {
 			get => throw new NotSupportedException();
 			set => throw new NotSupportedException();
 		}
@@ -941,8 +1016,7 @@ namespace EllipticBit.RichEditorNET
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		private new string? SelectedRtf
-		{
+		private new string? SelectedRtf {
 			get => throw new NotSupportedException();
 			set => throw new NotSupportedException();
 		}
@@ -952,8 +1026,7 @@ namespace EllipticBit.RichEditorNET
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		private new HorizontalAlignment SelectionAlignment
-		{
+		private new HorizontalAlignment SelectionAlignment {
 			get => throw new NotSupportedException();
 			set => throw new NotSupportedException();
 		}
@@ -961,8 +1034,7 @@ namespace EllipticBit.RichEditorNET
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		private new Color SelectionBackColor
-		{
+		private new Color SelectionBackColor {
 			get => throw new NotSupportedException();
 			set => throw new NotSupportedException();
 		}
@@ -970,8 +1042,7 @@ namespace EllipticBit.RichEditorNET
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		private new bool SelectionBullet
-		{
+		private new bool SelectionBullet {
 			get => throw new NotSupportedException();
 			set => throw new NotSupportedException();
 		}
@@ -979,8 +1050,7 @@ namespace EllipticBit.RichEditorNET
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		private new int SelectionCharOffset
-		{
+		private new int SelectionCharOffset {
 			get => throw new NotSupportedException();
 			set => throw new NotSupportedException();
 		}
@@ -988,8 +1058,7 @@ namespace EllipticBit.RichEditorNET
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		private new Color SelectionColor
-		{
+		private new Color SelectionColor {
 			get => throw new NotSupportedException();
 			set => throw new NotSupportedException();
 		}
@@ -997,8 +1066,7 @@ namespace EllipticBit.RichEditorNET
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		private new Font? SelectionFont
-		{
+		private new Font? SelectionFont {
 			get => throw new NotSupportedException();
 			set => throw new NotSupportedException();
 		}
@@ -1006,8 +1074,7 @@ namespace EllipticBit.RichEditorNET
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		private new int SelectionHangingIndent
-		{
+		private new int SelectionHangingIndent {
 			get => throw new NotSupportedException();
 			set => throw new NotSupportedException();
 		}
@@ -1015,8 +1082,7 @@ namespace EllipticBit.RichEditorNET
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		private new int SelectionIndent
-		{
+		private new int SelectionIndent {
 			get => throw new NotSupportedException();
 			set => throw new NotSupportedException();
 		}
@@ -1024,8 +1090,7 @@ namespace EllipticBit.RichEditorNET
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		private new bool SelectionProtected
-		{
+		private new bool SelectionProtected {
 			get => throw new NotSupportedException();
 			set => throw new NotSupportedException();
 		}
@@ -1033,8 +1098,7 @@ namespace EllipticBit.RichEditorNET
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		private new int SelectionRightIndent
-		{
+		private new int SelectionRightIndent {
 			get => throw new NotSupportedException();
 			set => throw new NotSupportedException();
 		}
@@ -1042,8 +1106,7 @@ namespace EllipticBit.RichEditorNET
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		private new int[] SelectionTabs
-		{
+		private new int[] SelectionTabs {
 			get => throw new NotSupportedException();
 			set => throw new NotSupportedException();
 		}
@@ -1051,8 +1114,7 @@ namespace EllipticBit.RichEditorNET
 		[Browsable(false)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		private new int BulletIndent
-		{
+		private new int BulletIndent {
 			get => throw new NotSupportedException();
 			set => throw new NotSupportedException();
 		}
@@ -1060,38 +1122,32 @@ namespace EllipticBit.RichEditorNET
 		// Hide file save/load methods
 
 		[EditorBrowsable(EditorBrowsableState.Never)]
-		private new void LoadFile(string path)
-		{
+		private new void LoadFile(string path) {
 			throw new NotSupportedException();
 		}
 
 		[EditorBrowsable(EditorBrowsableState.Never)]
-		private new void LoadFile(string path, RichTextBoxStreamType fileType)
-		{
+		private new void LoadFile(string path, RichTextBoxStreamType fileType) {
 			throw new NotSupportedException();
 		}
 
 		[EditorBrowsable(EditorBrowsableState.Never)]
-		private new void LoadFile(Stream data, RichTextBoxStreamType fileType)
-		{
+		private new void LoadFile(Stream data, RichTextBoxStreamType fileType) {
 			throw new NotSupportedException();
 		}
 
 		[EditorBrowsable(EditorBrowsableState.Never)]
-		private new void SaveFile(string path)
-		{
+		private new void SaveFile(string path) {
 			throw new NotSupportedException();
 		}
 
 		[EditorBrowsable(EditorBrowsableState.Never)]
-		private new void SaveFile(string path, RichTextBoxStreamType fileType)
-		{
+		private new void SaveFile(string path, RichTextBoxStreamType fileType) {
 			throw new NotSupportedException();
 		}
 
 		[EditorBrowsable(EditorBrowsableState.Never)]
-		private new void SaveFile(Stream data, RichTextBoxStreamType fileType)
-		{
+		private new void SaveFile(Stream data, RichTextBoxStreamType fileType) {
 			throw new NotSupportedException();
 		}
 

@@ -33,6 +33,18 @@ namespace Test
 			// richTextBox1
 			// 
 			richTextBox1.Dock = DockStyle.Fill;
+			richTextBox1.EnableAlignment = false;
+			richTextBox1.EnableBackgroundColor = false;
+			richTextBox1.EnableCommonMarkdown = true;
+			richTextBox1.EnableFontColor = false;
+			richTextBox1.EnableFontName = false;
+			richTextBox1.EnableFontSize = false;
+			richTextBox1.EnableGithubMarkdown = true;
+			richTextBox1.EnableIndent = false;
+			richTextBox1.EnableSubscript = false;
+			richTextBox1.EnableSuperscript = false;
+			richTextBox1.EnableUnderline = false;
+			richTextBox1.HideSelection = false;
 			richTextBox1.Location = new Point(0, 0);
 			richTextBox1.Name = "richTextBox1";
 			richTextBox1.Size = new Size(1574, 929);
@@ -48,6 +60,7 @@ namespace Test
 			Name = "Form1";
 			StartPosition = FormStartPosition.CenterScreen;
 			Text = "Form1";
+			Activated += Form1_Activated;
 			ResumeLayout(false);
 		}
 

@@ -188,14 +188,17 @@ namespace EllipticBit.RichEditorNET
 			strip.Items.Add(CreateButton(_icons.FontSizeIncrease, "Increase Font Size", _editor.EnableFontSize, (s, e) => _editor.IncreaseFontSize()));
 			strip.Items.Add(CreateButton(_icons.FontSizeDecrease, "Decrease Font Size", _editor.EnableFontSize, (s, e) => _editor.DecreaseFontSize()));
 
-			AddSeparator(strip);
+			bool hasFontGroup = _editor.EnableFontName || _editor.EnableFontSize;
+			bool hasInsertGroup = _editor.EnableHyperlinks || _editor.EnableImages;
+			bool hasListGroup = _editor.EnableLists;
+			AddSeparator(strip, hasFontGroup && (hasInsertGroup || hasListGroup));
 
 			strip.Items.Add(CreateButton(_icons.Hyperlink, "Insert Hyperlink", _editor.EnableHyperlinks, (s, e) => _editor.RaiseInsertHyperlinkClicked()));
 
 			strip.Items.Add(CreateButton(_icons.InsertImage, "Insert Image", _editor.EnableImages && _editor.RequireEmbeddedImage, (s, e) => _editor.RaiseInsertImageClicked()));
 			strip.Items.Add(CreateButton(_icons.InsertLinkedThumbnail, "Insert Linked Thumbnail", _editor.EnableImages && !_editor.RequireEmbeddedImage, (s, e) => _editor.RaiseInsertLinkedThumbnailClicked()));
 
-			AddSeparator(strip);
+			AddSeparator(strip, hasInsertGroup && hasListGroup);
 
 			strip.Items.Add(CreateButton(_icons.BulletList, "Bullet List", _editor.EnableLists, (s, e) => { _editor.ToggleList(ListStyle.Bullet); RefreshState(); }));
 			strip.Items.Add(CreateButton(_icons.OrderedList, "Ordered List", _editor.EnableLists, (s, e) => { _editor.ToggleList(ListStyle.Decimal); RefreshState(); }));
@@ -218,7 +221,10 @@ namespace EllipticBit.RichEditorNET
 			strip.Items.Add(CreateToggleButton(_icons.Subscript, "Subscript", _editor.EnableSubscript, (s, e) => { _editor.ToggleSubscript(); RefreshState(); }));
 			strip.Items.Add(CreateToggleButton(_icons.Superscript, "Superscript", _editor.EnableSuperscript, (s, e) => { _editor.ToggleSuperscript(); RefreshState(); }));
 
-			AddSeparator(strip);
+			bool hasTextGroup = _editor.EnableBold || _editor.EnableItalic || _editor.EnableUnderline || _editor.EnableStrikeThrough || _editor.EnableSubscript || _editor.EnableSuperscript;
+			bool hasColorGroup = _editor.EnableBackgroundColor || _editor.EnableFontColor;
+			bool hasAlignGroup = _editor.EnableAlignment;
+			AddSeparator(strip, hasTextGroup && (hasColorGroup || hasAlignGroup));
 
 			strip.Items.Add(CreateColorSplitButton(_icons.BackgroundColor, "Background Color", _editor.EnableBackgroundColor,
 				color => { _lastBackgroundColor = color; _editor.SetBackgroundColor(color); },
@@ -227,7 +233,7 @@ namespace EllipticBit.RichEditorNET
 				color => { _lastFontColor = color; _editor.SetFontColor(color); },
 				() => _lastFontColor));
 
-			AddSeparator(strip);
+			AddSeparator(strip, hasColorGroup && hasAlignGroup);
 
 			strip.Items.Add(CreateToggleButton(_icons.AlignLeft, "Align Left", _editor.EnableAlignment, (s, e) => { _editor.SetAlignment(ParagraphAlignment.Left); RefreshState(); }));
 			strip.Items.Add(CreateToggleButton(_icons.AlignCenter, "Align Center", _editor.EnableAlignment, (s, e) => { _editor.SetAlignment(ParagraphAlignment.Center); RefreshState(); }));
@@ -457,9 +463,9 @@ namespace EllipticBit.RichEditorNET
 			return button;
 		}
 
-		private static void AddSeparator(ToolStrip strip)
+		private static void AddSeparator(ToolStrip strip, bool visible = true)
 		{
-			strip.Items.Add(new ToolStripSeparator());
+			strip.Items.Add(new ToolStripSeparator { Visible = visible });
 		}
 
 		private ToolStripSplitButton CreateColorSplitButton(Bitmap icon, string toolTip, bool visible,
