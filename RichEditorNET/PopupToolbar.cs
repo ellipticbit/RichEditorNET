@@ -21,6 +21,8 @@ namespace EllipticBit.RichEditorNET
 
 		private ToolStripComboBox _fontCombo;
 		private ToolStripComboBox _sizeCombo;
+		private Color _lastFontColor = Color.Black;
+		private Color _lastBackgroundColor = Color.Yellow;
 
 		internal PopupToolbar(RichEditBox editor, ToolbarIconCache icons)
 		{
@@ -215,8 +217,12 @@ namespace EllipticBit.RichEditorNET
 
 			AddSeparator(strip);
 
-			strip.Items.Add(CreateButton(_icons.BackgroundColor, "Background Color", _editor.EnableBackgroundColor, OnBackgroundColorClick));
-			strip.Items.Add(CreateButton(_icons.FontColor, "Font Color", _editor.EnableFontColor, OnFontColorClick));
+			strip.Items.Add(CreateColorSplitButton(_icons.BackgroundColor, "Background Color", _editor.EnableBackgroundColor,
+				color => { _lastBackgroundColor = color; _editor.SetBackgroundColor(color); },
+				() => _lastBackgroundColor));
+			strip.Items.Add(CreateColorSplitButton(_icons.FontColor, "Font Color", _editor.EnableFontColor,
+				color => { _lastFontColor = color; _editor.SetFontColor(color); },
+				() => _lastFontColor));
 
 			AddSeparator(strip);
 
@@ -404,40 +410,6 @@ namespace EllipticBit.RichEditorNET
 			}
 		}
 
-		private void OnFontColorClick(object sender, EventArgs e)
-		{
-			_blockingOperations++;
-			try
-			{
-				using (var dialog = new ColorDialog { FullOpen = true })
-				{
-					if (dialog.ShowDialog(this) == DialogResult.OK)
-						_editor.SetFontColor(dialog.Color);
-				}
-			}
-			finally
-			{
-				_blockingOperations--;
-			}
-		}
-
-		private void OnBackgroundColorClick(object sender, EventArgs e)
-		{
-			_blockingOperations++;
-			try
-			{
-				using (var dialog = new ColorDialog { FullOpen = true })
-				{
-					if (dialog.ShowDialog(this) == DialogResult.OK)
-						_editor.SetBackgroundColor(dialog.Color);
-				}
-			}
-			finally
-			{
-				_blockingOperations--;
-			}
-		}
-
 		#endregion
 
 		#region - Helpers -
@@ -485,6 +457,90 @@ namespace EllipticBit.RichEditorNET
 		private static void AddSeparator(ToolStrip strip)
 		{
 			strip.Items.Add(new ToolStripSeparator());
+		}
+
+		private ToolStripSplitButton CreateColorSplitButton(Bitmap icon, string toolTip, bool visible,
+			Action<Color> applyColor, Func<Color> getLastColor)
+		{
+			var button = new ToolStripSplitButton
+			{
+				Image = icon,
+				ToolTipText = toolTip,
+				DisplayStyle = ToolStripItemDisplayStyle.Image,
+				Visible = visible,
+			};
+
+			button.ButtonClick += (s, e) => applyColor(getLastColor());
+
+			button.DropDownOpening += (s, e) => _blockingOperations++;
+			button.DropDownClosed += (s, e) =>
+			{
+				_blockingOperations--;
+				BeginInvoke(new Action(() =>
+				{
+					if (_blockingOperations == 0 && !ContainsFocus && !Disposing && !IsDisposed)
+						Hide();
+				}));
+			};
+
+			AddColorItem(button, "Black", Color.Black, applyColor);
+			AddColorItem(button, "Dark Gray", Color.FromArgb(64, 64, 64), applyColor);
+			AddColorItem(button, "Gray", Color.Gray, applyColor);
+			AddColorItem(button, "Silver", Color.Silver, applyColor);
+			AddColorItem(button, "White", Color.White, applyColor);
+			AddColorItem(button, "Dark Red", Color.FromArgb(192, 0, 0), applyColor);
+			AddColorItem(button, "Red", Color.Red, applyColor);
+			AddColorItem(button, "Orange", Color.FromArgb(255, 165, 0), applyColor);
+			AddColorItem(button, "Yellow", Color.Yellow, applyColor);
+			AddColorItem(button, "Light Green", Color.FromArgb(146, 208, 80), applyColor);
+			AddColorItem(button, "Green", Color.Green, applyColor);
+			AddColorItem(button, "Cyan", Color.Cyan, applyColor);
+			AddColorItem(button, "Light Blue", Color.FromArgb(0, 176, 240), applyColor);
+			AddColorItem(button, "Blue", Color.Blue, applyColor);
+			AddColorItem(button, "Dark Blue", Color.FromArgb(0, 32, 96), applyColor);
+			AddColorItem(button, "Purple", Color.FromArgb(112, 48, 160), applyColor);
+			AddColorItem(button, "Magenta", Color.Magenta, applyColor);
+			AddColorItem(button, "Pink", Color.FromArgb(255, 102, 153), applyColor);
+			AddColorItem(button, "Teal", Color.Teal, applyColor);
+			AddColorItem(button, "Navy", Color.Navy, applyColor);
+
+			button.DropDownItems.Add(new ToolStripSeparator());
+			button.DropDownItems.Add(new ToolStripMenuItem("More Colors...", null, (s, e) =>
+			{
+				_blockingOperations++;
+				try
+				{
+					using (var dialog = new ColorDialog { FullOpen = true })
+					{
+						if (dialog.ShowDialog(this) == DialogResult.OK)
+							applyColor(dialog.Color);
+					}
+				}
+				finally
+				{
+					_blockingOperations--;
+				}
+			}));
+
+			return button;
+		}
+
+		private static void AddColorItem(ToolStripSplitButton button, string name, Color color, Action<Color> applyColor)
+		{
+			button.DropDownItems.Add(new ToolStripMenuItem(name, CreateColorSwatch(color), (s, e) => applyColor(color)));
+		}
+
+		private static Bitmap CreateColorSwatch(Color color)
+		{
+			var swatch = new Bitmap(16, 16);
+			using (var g = Graphics.FromImage(swatch))
+			{
+				using (var brush = new SolidBrush(color))
+					g.FillRectangle(brush, 0, 0, 16, 16);
+				using (var pen = new Pen(Color.FromArgb(180, 180, 180)))
+					g.DrawRectangle(pen, 0, 0, 15, 15);
+			}
+			return swatch;
 		}
 
 		#endregion
