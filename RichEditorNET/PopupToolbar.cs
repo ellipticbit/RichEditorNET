@@ -22,8 +22,10 @@ namespace EllipticBit.RichEditorNET
 
 		private ToolStripComboBox _fontCombo;
 		private ToolStripComboBox _sizeCombo;
+		private ToolStripComboBox _blockStyleCombo;
 		private Color _lastFontColor = Color.Black;
 		private Color _lastBackgroundColor = Color.Yellow;
+		private bool _updatingState;
 
 		internal PopupToolbar(RichEditBox editor, ToolbarIconCache icons)
 		{
@@ -161,6 +163,29 @@ namespace EllipticBit.RichEditorNET
 			};
 			strip.Items.Add(_fontCombo);
 
+			_blockStyleCombo = new ToolStripComboBox
+			{
+				DropDownStyle = ComboBoxStyle.DropDownList,
+				AutoSize = false,
+				Width = 150,
+				FlatStyle = FlatStyle.System,
+				Visible = _editor.EnableHtmlFontSizing,
+			};
+			foreach (var name in BlockStyleHelper.BlockStyleNames)
+				_blockStyleCombo.Items.Add(name);
+			_blockStyleCombo.SelectedIndexChanged += OnBlockStyleChanged;
+			_blockStyleCombo.DropDown += (s, e) => _blockingOperations++;
+			_blockStyleCombo.DropDownClosed += (s, e) =>
+			{
+				_blockingOperations--;
+				BeginInvoke(new Action(() =>
+				{
+					if (_blockingOperations == 0 && !ContainsFocus && !Disposing && !IsDisposed)
+						Hide();
+				}));
+			};
+			strip.Items.Add(_blockStyleCombo);
+
 			_sizeCombo = new ToolStripComboBox
 			{
 				DropDownStyle = ComboBoxStyle.DropDown,
@@ -188,7 +213,7 @@ namespace EllipticBit.RichEditorNET
 			strip.Items.Add(CreateButton(_icons.FontSizeIncrease, "Increase Font Size", _editor.EnableFontSize, (s, e) => _editor.IncreaseFontSize()));
 			strip.Items.Add(CreateButton(_icons.FontSizeDecrease, "Decrease Font Size", _editor.EnableFontSize, (s, e) => _editor.DecreaseFontSize()));
 
-			bool hasFontGroup = _editor.EnableFontName || _editor.EnableFontSize;
+			bool hasFontGroup = _editor.EnableFontName || _editor.EnableFontSize || _editor.EnableHtmlFontSizing;
 			bool hasInsertGroup = _editor.EnableHyperlinks || _editor.EnableImages;
 			bool hasListGroup = _editor.EnableLists;
 			AddSeparator(strip, hasFontGroup && (hasInsertGroup || hasListGroup));
@@ -308,6 +333,19 @@ namespace EllipticBit.RichEditorNET
 							catch { /* ignore COM errors for undefined state */ }
 						}
 
+						if (_editor.EnableHtmlFontSizing)
+						{
+							try
+							{
+								var blockStyle = _editor.GetBlockStyle();
+								int idx = (int)blockStyle;
+								_updatingState = true;
+								try { _blockStyleCombo.SelectedIndex = idx; }
+								finally { _updatingState = false; }
+							}
+							catch { /* ignore COM errors for undefined state */ }
+						}
+
 						SetChecked("Bold", font.Bold == tomConstants.tomTrue);
 						SetChecked("Italic", font.Italic == tomConstants.tomTrue);
 						SetChecked("Underline", font.Underline != tomConstants.tomNone && font.Underline != tomConstants.tomUndefined && font.Underline > 0);
@@ -415,6 +453,17 @@ namespace EllipticBit.RichEditorNET
 			if (float.TryParse(_sizeCombo.Text, out float size) && size > 0)
 			{
 				_editor.SetFontSize(size);
+				_editor.Focus();
+			}
+		}
+
+		private void OnBlockStyleChanged(object sender, EventArgs e)
+		{
+			if (_updatingState) return;
+			if (_blockStyleCombo.SelectedIndex >= 0)
+			{
+				_editor.SetBlockStyle((BlockStyle)_blockStyleCombo.SelectedIndex);
+				RefreshState();
 				_editor.Focus();
 			}
 		}

@@ -151,7 +151,7 @@ namespace EllipticBit.RichEditorNET
 		[Category("Behavior")]
 		[Description("Enables or disables font name formatting.")]
 		public bool EnableFontName {
-			get => _enableFontName && !_enableCommonMarkdown;
+			get => _enableFontName && !EnableHtmlFontSizing;
 			set => _enableFontName = value;
 		}
 
@@ -161,7 +161,7 @@ namespace EllipticBit.RichEditorNET
 		[Category("Behavior")]
 		[Description("Enables or disables font size formatting.")]
 		public bool EnableFontSize {
-			get => _enableFontSize && !_enableCommonMarkdown;
+			get => _enableFontSize && !EnableHtmlFontSizing;
 			set => _enableFontSize = value;
 		}
 
@@ -211,6 +211,16 @@ namespace EllipticBit.RichEditorNET
 		}
 
 		private bool _enableIndent = true;
+
+		[DefaultValue(false)]
+		[Category("Behavior")]
+		[Description("Enables HTML heading sizes instead of free-form font size/name. Automatically enabled when markdown modes are active.")]
+		public bool EnableHtmlFontSizing {
+			get => _enableHtmlFontSizing || _enableCommonMarkdown;
+			set => _enableHtmlFontSizing = value;
+		}
+
+		private bool _enableHtmlFontSizing;
 
 		[DefaultValue(true)]
 		[Category("Behavior")]
@@ -266,6 +276,15 @@ namespace EllipticBit.RichEditorNET
 		public string Markdown {
 			get => MarkdownFormatter.ToMarkdown(TextDocument, EnableGithubMarkdown);
 			set => MarkdownFormatter.FromMarkdown(TextDocument, value, EnableGithubMarkdown);
+		}
+
+		/// <summary>
+		/// Gets or sets the document content as a html string.
+		/// </summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public string Html {
+			set => HtmlFormatter.FromHtml(TextDocument, value);
 		}
 
 		internal void RaiseInsertHyperlinkClicked() => InsertHyperlinkClicked?.Invoke(this, EventArgs.Empty);
@@ -675,6 +694,82 @@ namespace EllipticBit.RichEditorNET
 				}
 				finally {
 					Marshal.ReleaseComObject(font);
+				}
+			}
+			finally {
+				Marshal.ReleaseComObject(range);
+			}
+		}
+
+		/// <summary>
+		/// Sets the block style (heading level, paragraph, or preformatted) on the current selection's paragraph.
+		/// </summary>
+		/// <param name="style">The block style to apply.</param>
+		public void SetBlockStyle(BlockStyle style) {
+			if (!EnableHtmlFontSizing) throw new InvalidOperationException("HTML font sizing is disabled.");
+			var range = GetSelectionRange();
+			try {
+				range.Expand(tomConstants.tomParagraph);
+				int paraEnd = range.End;
+				if (paraEnd > range.Start && range.GetText2(tomConstants.tomUseCRLF) != null) {
+					int textEnd = paraEnd;
+					var checkRange = TextDocument.Range2(paraEnd - 1, paraEnd);
+					try {
+						if (checkRange.Char == '\r' || checkRange.Char == '\n')
+							textEnd = paraEnd - 1;
+					}
+					finally {
+						Marshal.ReleaseComObject(checkRange);
+					}
+					range.SetRange(range.Start, textEnd);
+				}
+				var font = range.Font;
+				try {
+					if (style == BlockStyle.Preformatted) {
+						font.Bold = tomConstants.tomFalse;
+						font.Size = BlockStyleHelper.PreformattedPointSize;
+						font.Name = BlockStyleHelper.PreformattedFontName;
+					}
+					else if (style == BlockStyle.Paragraph) {
+						font.Bold = tomConstants.tomFalse;
+						font.Size = BlockStyleHelper.ParagraphPointSize;
+						font.Name = "";
+					}
+					else {
+						int level = (int)style;
+						font.Bold = tomConstants.tomTrue;
+						font.Size = BlockStyleHelper.HeadingPointSizes[level];
+						font.Name = "";
+					}
+				}
+				finally {
+					Marshal.ReleaseComObject(font);
+				}
+			}
+			finally {
+				Marshal.ReleaseComObject(range);
+			}
+		}
+
+		/// <summary>
+		/// Gets the block style of the current selection's paragraph by probing its first character.
+		/// </summary>
+		internal BlockStyle GetBlockStyle() {
+			var range = GetSelectionRange();
+			try {
+				range.Expand(tomConstants.tomParagraph);
+				var probe = TextDocument.Range2(range.Start, range.Start + 1);
+				try {
+					var font = probe.Font;
+					try {
+						return BlockStyleHelper.GetBlockStyleFromFont(font.Size, font.Bold == tomConstants.tomTrue, font.Name);
+					}
+					finally {
+						Marshal.ReleaseComObject(font);
+					}
+				}
+				finally {
+					Marshal.ReleaseComObject(probe);
 				}
 			}
 			finally {

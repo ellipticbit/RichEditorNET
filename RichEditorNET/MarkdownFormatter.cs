@@ -44,14 +44,37 @@ namespace EllipticBit.RichEditorNET
 
 					bool isList = listType != tomConstants.tomListNone;
 
-					if (isList) {
+					int headingLevel = 0;
+					if (!isList && textEnd > paraStart) {
+						var probeChar = doc.Range2(paraStart, paraStart + 1);
+						try {
+							var pFont = probeChar.Font;
+							try {
+								if (pFont.Bold == tomConstants.tomTrue)
+									headingLevel = BlockStyleHelper.GetHeadingLevelFromSize(pFont.Size);
+							}
+							finally {
+								Marshal.ReleaseComObject(pFont);
+							}
+						}
+						finally {
+							Marshal.ReleaseComObject(probeChar);
+						}
+					}
+
+					if (headingLevel > 0) {
+						for (int h = 0; h < headingLevel; h++)
+							sb.Append('#');
+						sb.Append(' ');
+					}
+					else if (isList) {
 						for (int i = 0; i < listLevel; i++)
 							sb.Append("    ");
 						sb.Append(listType == tomConstants.tomListBullet ? "- " : "1. ");
 					}
 
 					if (textEnd > paraStart)
-						EmitInlineContent(doc, sb, paraStart, textEnd, githubMarkdown);
+						EmitInlineContent(doc, sb, paraStart, textEnd, githubMarkdown, headingLevel > 0);
 
 					sb.Append('\n');
 
@@ -66,7 +89,7 @@ namespace EllipticBit.RichEditorNET
 			return sb.ToString().TrimEnd();
 		}
 
-		private static void EmitInlineContent(ITextDocument2 doc, StringBuilder sb, int start, int end, bool githubMarkdown) {
+		private static void EmitInlineContent(ITextDocument2 doc, StringBuilder sb, int start, int end, bool githubMarkdown, bool suppressBold = false) {
 			bool bold = false;
 			bool italic = false;
 			bool strikethrough = false;
@@ -99,7 +122,7 @@ namespace EllipticBit.RichEditorNET
 					var font = runRange.Font;
 					bool newBold, newItalic, newStrikethrough;
 					try {
-						newBold = font.Bold == tomConstants.tomTrue;
+						newBold = !suppressBold && font.Bold == tomConstants.tomTrue;
 						newItalic = font.Italic == tomConstants.tomTrue;
 						newStrikethrough = githubMarkdown && font.StrikeThrough == tomConstants.tomTrue;
 					}
@@ -198,6 +221,7 @@ namespace EllipticBit.RichEditorNET
 			public List<InlineSpan> Spans;
 			public int ListType;
 			public int ListLevel;
+			public int HeadingLevel;
 		}
 
 		internal static void FromMarkdown(ITextDocument2 doc, string markdown, bool githubMarkdown) {
@@ -231,6 +255,15 @@ namespace EllipticBit.RichEditorNET
 			}
 		}
 
+		private static int TryParseHeadingPrefix(string line) {
+			int i = 0;
+			while (i < line.Length && line[i] == '#') i++;
+			if (i == 0 || i > 6) return 0;
+			if (i < line.Length && line[i] == ' ') return i;
+			if (i == line.Length) return i;
+			return 0;
+		}
+
 		private static List<ParagraphBlock> ParseBlocks(string markdown, bool githubMarkdown) {
 			var blocks = new List<ParagraphBlock>();
 			var lines = markdown.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
@@ -242,7 +275,8 @@ namespace EllipticBit.RichEditorNET
 					blocks.Add(new ParagraphBlock {
 						Spans = new List<InlineSpan>(),
 						ListType = tomConstants.tomListNone,
-						ListLevel = 0
+						ListLevel = 0,
+						HeadingLevel = 0
 					});
 					continue;
 				}
@@ -256,25 +290,42 @@ namespace EllipticBit.RichEditorNET
 				string trimmed = line.Substring(pos);
 				int listLevel = indent / 4;
 
+				int headingLevel = 0;
+				if (listLevel == 0) {
+					headingLevel = TryParseHeadingPrefix(trimmed);
+				}
+
+				if (headingLevel > 0) {
+					string content = headingLevel < trimmed.Length ? trimmed.Substring(headingLevel + 1) : string.Empty;
+					blocks.Add(new ParagraphBlock {
+						Spans = ParseInline(content, githubMarkdown),
+						ListType = tomConstants.tomListNone,
+						ListLevel = 0,
+						HeadingLevel = headingLevel
+					});
+					continue;
+				}
+
 				int listType = tomConstants.tomListNone;
-				string content = trimmed;
+				string listContent = trimmed;
 
 				if (trimmed.Length >= 2 && (trimmed[0] == '-' || trimmed[0] == '*' || trimmed[0] == '+') && trimmed[1] == ' ') {
 					listType = tomConstants.tomListBullet;
-					content = trimmed.Substring(2);
+					listContent = trimmed.Substring(2);
 				}
 				else {
 					int orderedLen = TryParseOrderedPrefix(trimmed);
 					if (orderedLen > 0) {
 						listType = tomConstants.tomListNumberAsArabic;
-						content = trimmed.Substring(orderedLen);
+						listContent = trimmed.Substring(orderedLen);
 					}
 				}
 
 				blocks.Add(new ParagraphBlock {
-					Spans = ParseInline(content, githubMarkdown),
+					Spans = ParseInline(listContent, githubMarkdown),
 					ListType = listType,
-					ListLevel = listLevel
+					ListLevel = listLevel,
+					HeadingLevel = 0
 				});
 			}
 
@@ -489,7 +540,41 @@ namespace EllipticBit.RichEditorNET
 						}
 					}
 
+					int blockStart = range.Start;
 					InsertSpans(doc, range, block.Spans);
+					int blockEnd = range.Start;
+
+					if (block.HeadingLevel > 0 && blockEnd > blockStart) {
+						var headingRange = doc.Range2(blockStart, blockEnd);
+						try {
+							var hFont = headingRange.Font;
+							try {
+								hFont.Bold = tomConstants.tomTrue;
+								hFont.Size = BlockStyleHelper.HeadingPointSizes[block.HeadingLevel];
+							}
+							finally {
+								Marshal.ReleaseComObject(hFont);
+							}
+						}
+						finally {
+							Marshal.ReleaseComObject(headingRange);
+						}
+
+						var resetRange = doc.Range2(blockEnd, blockEnd);
+						try {
+							var rFont = resetRange.Font;
+							try {
+								rFont.Bold = tomConstants.tomFalse;
+								rFont.Size = BlockStyleHelper.ParagraphPointSize;
+							}
+							finally {
+								Marshal.ReleaseComObject(rFont);
+							}
+						}
+						finally {
+							Marshal.ReleaseComObject(resetRange);
+						}
+					}
 				}
 
 				var lastBlock = blocks[blocks.Count - 1];
