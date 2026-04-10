@@ -34,8 +34,6 @@ namespace Test
 			// 
 			richTextBox1.Dock = DockStyle.Fill;
 			richTextBox1.HideSelection = false;
-			richTextBox1.EnableCommonMarkdown = true;
-			richTextBox1.EnableGithubMarkdown = true;
 			richTextBox1.Location = new Point(0, 0);
 			richTextBox1.Name = "richTextBox1";
 			richTextBox1.Size = new Size(1574, 929);

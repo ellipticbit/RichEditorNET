@@ -35,9 +35,145 @@ namespace Test
 			var output = richTextBox1.Markdown;
 
 			if (output.Equals(markdown, StringComparison.Ordinal)) {
-				MessageBox.Show("Markdown matches!");
+					MessageBox.Show("Markdown matches!");
 			}
-		}
+
+			// --- HTML formatting test ---
+			var html =
+				"<h1>Heading 1</h1>" +
+				"<h2>Heading 2</h2>" +
+				"<h3>Heading 3</h3>" +
+				"<h4>Heading 4</h4>" +
+				"<h5>Heading 5</h5>" +
+				"<h6>Heading 6</h6>" +
+
+				// Bold variants
+				"<p>This is <b>bold with b</b> and <strong>bold with strong</strong> " +
+				"and <span style=\"font-weight: bold\">bold with CSS</span>.</p>" +
+
+				// Italic variants
+				"<p>This is <i>italic with i</i> and <em>italic with em</em> " +
+				"and <span style=\"font-style: italic\">italic with CSS</span>.</p>" +
+
+				// Underline variants (5 styles)
+				"<p><u>Single underline</u> and <ins>underline with ins</ins> " +
+				"and <span style=\"text-decoration: underline\">underline with CSS</span>.</p>" +
+				"<p><span style=\"text-decoration-style: double; text-decoration-line: underline\">Double underline</span> " +
+				"<span style=\"text-decoration-style: dotted; text-decoration-line: underline\">Dotted underline</span> " +
+				"<span style=\"text-decoration-style: dashed; text-decoration-line: underline\">Dashed underline</span> " +
+				"<span style=\"text-decoration-style: wavy; text-decoration-line: underline\">Wavy underline</span>.</p>" +
+
+				// Strikethrough variants
+				"<p><s>Strikethrough with s</s> and <del>strikethrough with del</del> " +
+				"and <strike>strikethrough with strike</strike> " +
+				"and <span style=\"text-decoration: line-through\">strikethrough with CSS</span>.</p>" +
+
+				// Combined text-decoration
+				"<p><span style=\"text-decoration: underline line-through\">Underline and strikethrough combined</span>.</p>" +
+
+				// Font color
+				"<p><font color=\"red\">Red with font tag</font> " +
+				"<span style=\"color: #0000FF\">Blue with hex CSS</span> " +
+				"<span style=\"color: rgb(0, 128, 0)\">Green with rgb CSS</span>.</p>" +
+
+				// Background color
+				"<p><mark>Highlighted with mark</mark> " +
+				"<span style=\"background-color: yellow\">Yellow background with CSS</span> " +
+				"<span style=\"background-color: #FFC0CB\">Pink background with hex</span>.</p>" +
+
+				// Font name
+				"<p><font face=\"Arial\">Arial with font face</font> " +
+				"<span style=\"font-family: 'Times New Roman'\">Times New Roman with CSS</span>.</p>" +
+				"<p>Monospace tags: <code>code</code> <kbd>kbd</kbd> <tt>tt</tt> <samp>samp</samp>.</p>" +
+
+				// Font size - HTML font size attribute (1-7)
+				"<p><font size=\"1\">Size 1</font> <font size=\"2\">Size 2</font> " +
+				"<font size=\"3\">Size 3</font> <font size=\"4\">Size 4</font> " +
+				"<font size=\"5\">Size 5</font> <font size=\"6\">Size 6</font> " +
+				"<font size=\"7\">Size 7</font>.</p>" +
+
+				// Font size - CSS units
+				"<p><span style=\"font-size: 8pt\">8pt</span> " +
+				"<span style=\"font-size: 16px\">16px</span> " +
+				"<span style=\"font-size: 1.5em\">1.5em</span> " +
+				"<span style=\"font-size: 1.2rem\">1.2rem</span> " +
+				"<span style=\"font-size: 150%\">150%</span>.</p>" +
+
+				// Font size - CSS named sizes
+				"<p><span style=\"font-size: xx-small\">xx-small</span> " +
+				"<span style=\"font-size: x-small\">x-small</span> " +
+				"<span style=\"font-size: small\">small</span> " +
+				"<span style=\"font-size: medium\">medium</span> " +
+				"<span style=\"font-size: large\">large</span> " +
+				"<span style=\"font-size: x-large\">x-large</span> " +
+				"<span style=\"font-size: xx-large\">xx-large</span>.</p>" +
+
+				// Superscript and Subscript
+				"<p>Normal text with <sup>superscript</sup> and <sub>subscript</sub>.</p>" +
+
+				// Preformatted text
+				"<pre>Preformatted text block\n  with preserved   spacing\n    and line breaks</pre>" +
+
+				// Hyperlinks
+				"<p>A <a href=\"https://github.com\">simple hyperlink</a> " +
+				"and a <a href=\"https://example.com\"><b>bold hyperlink</b></a> " +
+				"and an <a href=\"https://example.com\"><i>italic hyperlink</i></a>.</p>" +
+
+				// Alignment
+				"<p style=\"text-align: left\">Left aligned paragraph.</p>" +
+				"<p style=\"text-align: center\">Center aligned paragraph.</p>" +
+				"<center>Centered with center tag.</center>" +
+				"<p style=\"text-align: right\">Right aligned paragraph.</p>" +
+				"<p style=\"text-align: justify\">Justified paragraph with enough text to show the justification effect on a wide enough display.</p>" +
+				"<p align=\"center\">Centered with align attribute.</p>" +
+
+				// Unordered list with nesting
+				"<ul>" +
+				"<li>Bullet item one</li>" +
+				"<li>Bullet item two" +
+				"<ul>" +
+				"<li>Nested bullet A</li>" +
+				"<li>Nested bullet B</li>" +
+				"</ul>" +
+				"</li>" +
+				"<li>Bullet item three</li>" +
+				"</ul>" +
+
+				// Ordered list with nesting
+				"<ol>" +
+				"<li>First ordered item</li>" +
+				"<li>Second ordered item" +
+				"<ol>" +
+				"<li>Nested ordered item</li>" +
+				"</ol>" +
+				"</li>" +
+				"<li>Third ordered item</li>" +
+				"</ol>" +
+
+				// Ordered list type variants
+				"<ol type=\"a\"><li>Lowercase alpha</li><li>Second alpha</li></ol>" +
+				"<ol type=\"A\"><li>Uppercase alpha</li><li>Second alpha</li></ol>" +
+				"<ol type=\"i\"><li>Lowercase roman</li><li>Second roman</li></ol>" +
+				"<ol type=\"I\"><li>Uppercase roman</li><li>Second roman</li></ol>" +
+
+				// Nested/combined formatting
+				"<p><b><i>Bold and italic</i></b> " +
+				"<b><u>Bold and underline</u></b> " +
+				"<i><s>Italic and strikethrough</s></i>.</p>" +
+				"<p><span style=\"color: red; font-weight: bold; font-style: italic\">Red bold italic via CSS</span>.</p>" +
+				"<p><b>Bold with <i>nested italic</i> inside</b> formatting.</p>" +
+
+				// Embedded image (colorful 4x4 checkerboard PNG, displayed at 64x64)
+				"<p>Embedded image: <img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAoSURBVBhXVckxDQAACMCwaUITIpCIqxE+OJtCqY1GSKc8lHKxycXmACitJyWNw1liAAAAAElFTkSuQmCC\" alt=\"Colorful PNG\" width=\"64\" height=\"64\" /></p>" +
+
+				// Linked thumbnail (colorful 4x4 pattern, displayed at 64x64, wrapped in hyperlink)
+				"<p>Linked thumbnail: <a href=\"https://example.com/fullsize.png\"><img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAApSURBVBhXYzjBcOI/w507///3MPxP+Z/ynwGZA5ZE4dy5858BmQOSBACWFypZKMSEbwAAAABJRU5ErkJggg==\" alt=\"Linked thumb\" width=\"64\" height=\"64\" /></a></p>" +
+
+				// Corrupted image (invalid data → should produce placeholder)
+				"<p>Corrupted image: <img src=\"data:image/png;base64,dGhpcyBpcyBub3QgYSB2YWxpZCBpbWFnZQ==\" alt=\"Bad image\" width=\"64\" height=\"64\" /></p>";
+
+				richTextBox1.Html = html;
+			}
 
 	}
 }

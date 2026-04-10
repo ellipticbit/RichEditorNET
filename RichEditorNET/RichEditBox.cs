@@ -284,6 +284,7 @@ namespace EllipticBit.RichEditorNET
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public string Html {
+			get => HtmlFormatter.ToHtml(TextDocument);
 			set => HtmlFormatter.FromHtml(TextDocument, value);
 		}
 
@@ -987,7 +988,7 @@ namespace EllipticBit.RichEditorNET
 			try {
 				var range = GetSelectionRange();
 				try {
-					range.InsertImage(DefaultImageWidth, DefaultImageHeight, 0, 0, altText ?? "", comStream);
+					range.InsertImage(PixelsToHimetric(DefaultImageWidth), PixelsToHimetric(DefaultImageHeight), 0, 0, altText ?? "", comStream);
 				}
 				finally {
 					Marshal.ReleaseComObject(range);
@@ -999,7 +1000,7 @@ namespace EllipticBit.RichEditorNET
 		}
 
 		/// <summary>
-		/// Inserts a downsampled thumbnail of the image at the current selection position,
+		/// Inserts a downsampled thumbnail
 		/// wrapped in a hyperlink to the original image URL. The thumbnail is resized to
 		/// <see cref="DefaultImageWidth"/> by <see cref="DefaultImageHeight"/> using high-quality
 		/// bicubic interpolation.
@@ -1028,7 +1029,7 @@ namespace EllipticBit.RichEditorNET
 				int cpStart = SelectionStart;
 				var range = GetSelectionRange();
 				try {
-					range.InsertImage(DefaultImageWidth, DefaultImageHeight, 0, 0, altText ?? "", comStream);
+					range.InsertImage(PixelsToHimetric(DefaultImageWidth), PixelsToHimetric(DefaultImageHeight), 0, 0, altText ?? "", comStream);
 				}
 				finally {
 					Marshal.ReleaseComObject(range);
@@ -1084,6 +1085,10 @@ namespace EllipticBit.RichEditorNET
 					return ms.ToArray();
 				}
 			}
+		}
+
+		private static int PixelsToHimetric(int pixels) {
+			return (int)(pixels * 2540L / 96);
 		}
 
 		private static System.Runtime.InteropServices.ComTypes.IStream CreateComStream(byte[] data) {
