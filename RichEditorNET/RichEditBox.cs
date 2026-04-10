@@ -237,6 +237,11 @@ namespace EllipticBit.RichEditorNET
 		[Description("When true, the popup toolbar shows the embedded image button. When false, it shows the linked thumbnail button.")]
 		public bool RequireEmbeddedImage { get; set; } = true;
 
+		[DefaultValue(false)]
+		[Category("Behavior")]
+		[Description("When true, loading HTML throws NotSupportedException for any unsupported HTML tag, attribute, or CSS property. When false, unsupported HTML is silently ignored.")]
+		public bool EnableStrictHtml { get; set; }
+
 		/// <summary>
 		/// Occurs when the Insert Hyperlink button is clicked on the popup toolbar.
 		/// </summary>
@@ -284,8 +289,8 @@ namespace EllipticBit.RichEditorNET
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public string Html {
-			get => HtmlFormatter.ToHtml(TextDocument);
-			set => HtmlFormatter.FromHtml(TextDocument, value);
+			get => HtmlFormatter.ToHtml(TextDocument, EnableHtmlFontSizing, Font.Name, Font.SizeInPoints);
+			set => HtmlFormatter.FromHtml(TextDocument, value, EnableStrictHtml);
 		}
 
 		internal void RaiseInsertHyperlinkClicked() => InsertHyperlinkClicked?.Invoke(this, EventArgs.Empty);

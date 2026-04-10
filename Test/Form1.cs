@@ -32,10 +32,10 @@ namespace Test
 
 			richTextBox1.Markdown = markdown;
 
-			var output = richTextBox1.Markdown;
+			var mdoutput = richTextBox1.Markdown;
 
-			if (output.Equals(markdown, StringComparison.Ordinal)) {
-					MessageBox.Show("Markdown matches!");
+			if (mdoutput.Equals(markdown, StringComparison.Ordinal)) {
+				MessageBox.Show("Markdown matches!");
 			}
 
 			// --- HTML formatting test ---
@@ -65,14 +65,14 @@ namespace Test
 
 				// Strikethrough variants
 				"<p><s>Strikethrough with s</s> and <del>strikethrough with del</del> " +
-				"and <strike>strikethrough with strike</strike> " +
+				"and <span style=\"text-decoration: line-through\">strikethrough with CSS span</span> " +
 				"and <span style=\"text-decoration: line-through\">strikethrough with CSS</span>.</p>" +
 
 				// Combined text-decoration
 				"<p><span style=\"text-decoration: underline line-through\">Underline and strikethrough combined</span>.</p>" +
 
 				// Font color
-				"<p><font color=\"red\">Red with font tag</font> " +
+				"<p><span style=\"color: red\">Red with color style</span> " +
 				"<span style=\"color: #0000FF\">Blue with hex CSS</span> " +
 				"<span style=\"color: rgb(0, 128, 0)\">Green with rgb CSS</span>.</p>" +
 
@@ -82,15 +82,15 @@ namespace Test
 				"<span style=\"background-color: #FFC0CB\">Pink background with hex</span>.</p>" +
 
 				// Font name
-				"<p><font face=\"Arial\">Arial with font face</font> " +
+				"<p><span style=\"font-family: Arial\">Arial with font-family style</span> " +
 				"<span style=\"font-family: 'Times New Roman'\">Times New Roman with CSS</span>.</p>" +
-				"<p>Monospace tags: <code>code</code> <kbd>kbd</kbd> <tt>tt</tt> <samp>samp</samp>.</p>" +
+				"<p>Monospace tags: <code>code</code> <kbd>kbd</kbd> <span style=\"font-family: monospace\">tt</span> <samp>samp</samp>.</p>" +
 
-				// Font size - HTML font size attribute (1-7)
-				"<p><font size=\"1\">Size 1</font> <font size=\"2\">Size 2</font> " +
-				"<font size=\"3\">Size 3</font> <font size=\"4\">Size 4</font> " +
-				"<font size=\"5\">Size 5</font> <font size=\"6\">Size 6</font> " +
-				"<font size=\"7\">Size 7</font>.</p>" +
+				// Font size - HTML font size equivalents via CSS
+				"<p><span style=\"font-size: 8pt\">Size 1</span> <span style=\"font-size: 10pt\">Size 2</span> " +
+				"<span style=\"font-size: 12pt\">Size 3</span> <span style=\"font-size: 14pt\">Size 4</span> " +
+				"<span style=\"font-size: 18pt\">Size 5</span> <span style=\"font-size: 24pt\">Size 6</span> " +
+				"<span style=\"font-size: 36pt\">Size 7</span>.</p>" +
 
 				// Font size - CSS units
 				"<p><span style=\"font-size: 8pt\">8pt</span> " +
@@ -122,10 +122,8 @@ namespace Test
 				// Alignment
 				"<p style=\"text-align: left\">Left aligned paragraph.</p>" +
 				"<p style=\"text-align: center\">Center aligned paragraph.</p>" +
-				"<center>Centered with center tag.</center>" +
 				"<p style=\"text-align: right\">Right aligned paragraph.</p>" +
 				"<p style=\"text-align: justify\">Justified paragraph with enough text to show the justification effect on a wide enough display.</p>" +
-				"<p align=\"center\">Centered with align attribute.</p>" +
 
 				// Unordered list with nesting
 				"<ul>" +
@@ -172,8 +170,14 @@ namespace Test
 				// Corrupted image (invalid data → should produce placeholder)
 				"<p>Corrupted image: <img src=\"data:image/png;base64,dGhpcyBpcyBub3QgYSB2YWxpZCBpbWFnZQ==\" alt=\"Bad image\" width=\"64\" height=\"64\" /></p>";
 
-				richTextBox1.Html = html;
+			richTextBox1.Html = html;
+
+			var htmloutput = richTextBox1.Html;
+
+			if (htmloutput.Equals(html, StringComparison.Ordinal)) {
+				MessageBox.Show("HTML matches!");
 			}
+		}
 
 	}
 }

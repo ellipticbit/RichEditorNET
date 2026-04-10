@@ -33,5 +33,8 @@ namespace EllipticBit.RichEditorNET
 
 		[DllImport("ole32.dll")]
 		internal static extern int CreateStreamOnHGlobal(IntPtr hGlobal, [MarshalAs(UnmanagedType.Bool)] bool fDeleteOnRelease, out System.Runtime.InteropServices.ComTypes.IStream ppstm);
+
+		[DllImport("ole32.dll")]
+		internal static extern void ReleaseStgMedium([In] ref System.Runtime.InteropServices.ComTypes.STGMEDIUM pmedium);
 	}
 }

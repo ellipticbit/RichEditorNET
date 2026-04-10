@@ -1,0 +1,71 @@
+The first phase of this project will involve creating the necessary COM interfaces to use the TextObjectModel2 COM interfaces in .NET. As these are COM interfaces we will follow the normal practice of placing each interface in it's own file in the #TextObjectModel2 folder. We will begin with the ITextDocument and ITextDocument2 interfaces.
+
+Excellent, next we are going to create the ITextSelection and ITextSelection2 interfaces, remembering to replace any relevant placeholders in the ITextDocument interfaces.
+
+Continuing on, we will now create the ITextFont and ITextFont2 interfaces.
+
+The last item on the list for implementing TOM is the tomConstants enumeration. Now in .NET we don't actually want this to be an enumeration since the TOM Constants Enum contains constants for many different TOM systems. Instead please implement this as a static class with public constants. Then update any relevant method parameters that use these constants.
+
+Now we want to create a subclass of the RichTextBox control called RichEditor in a name #RichEditor file of the same name. However, we want to hide all properties related to formatting text and Rtf as we will be accomplishing formatting using a different method. We also want to hide any methods related saving and loading of RTF files.
+
+Next we need handle a couple of quirks. First we need to make sure that the RICHEDIT50W version of the edit control is loaded via CreateParams, please place any PInvoke methods and constants in the PInvoke.cs file.
+
+Then we need to add a property the enables the system Spell Check for this editor called EnableSpellCheck which should default to true. Then override the OnHandleCreated method to enable spell check by default, making sure to respect the EnableSpellCheck property. As before, all PInvoke methods and constants should be placed in the PInvoke.cs file.
+
+The next quirk we want to handle is that when the right mouse button is clicked, we want to move the text caret to the position of the mouse cursor.
+
+Another quirk behavior we want to change is that when double-clicking on a word, or using mouse drag selection, we do NOT want to include an trailing space in the selection.
+
+----------
+
+The next phase of this project is adding support for the formatting options supported by ITextDocument2, however we want to limit ourselves to only those options that are available in HTML5/CSS. To start, let's implement Bold, Italic, and Underline, these should be implemented as public methods using the TOM2 interfaces. The underline method should have an optional Enum parameter that defaults to a single underline. The underline Enum should contain the supported styles of underlines in HTML5/CSS.
+
+Next let's add StrikeThrough, Font Color, and Background Color, making sure to release the COM objects when finished.
+
+Now let's add Changing the Font Name and Size. Also let's add methods to Increase and Decrease font size by point increments.
+
+Next, let's add support for Superscripts and Subscripts. Additionally, let's add support for numbered and unordered lists, including support for multi-level lists.
+
+For the last of the text formatting methods, we will add Left/Right/Center alignments and Indent/Outdent methods.
+
+Now we need to add methods to add hyperlinks and images to the document. Hyperlinks must be a validated Url string. Images may be added in two ways. Both will use new DefaultImageHeight and DefaultImageWidth properties to define the default display size in the document. The first method is a the image is directly placed as-is into the document with no modification. The second method is the image itself is a thumbnail inside a hyperlink to the original Image URL that has been down-sampled using the best method available in .NET, allowing the small thumbnail to be stored in the document while keeping the original available to the user. Supported image formats are Jpeg, Png, and Gif.
+
+The next task is to add Enable properties for each text, paragraph, and content formatting behavior that we just added. Additionally, update each method to throw exceptions when the Enable method is false.
+
+Now that the Enable properties have been added we need to make a Popup toolbar similar to the popup editing toolbar in Microsoft Word that pops up above the context menu when the right mouse button is clicked. When an Enable property is false the corresponding toolbar button should not be displayed. The toolbar should be arranged similar to MS Word as well. Their should be two rows of toolbar buttons, the first row has the font selector, a font size selector, and font size up/down buttons, buttons to add hyperlinks and images, and unordered/ordered list. There will be two buttons for adding images, one for each type, but only one can be visible per instance, depending on the value of a bool property named RequireEmbbededImage. The bottom row should contain buttons for Bold/Italic/Underline(with multiple types of underline available in a selector)/Strikethrough/Subscript/Superscript/Background Color/Font Color/Each alignment type. Please include an icon for each button. Finally, please ensure that the toolbar is disposed of after use.
+
+Currently the toolbar icons are rendered as 64x64 and down-sampled based on scaling, however the drawing code still uses 16x16 coordinates, which creates weird artifacts when up-scaled then down-scaled. Please correct all drawing to use 64x64 drawing and then down-scale.
+
+This isn't working. I've reset the files to their earlier state from git. Instead why don't we do this. When the user right clicks on a misspelled word, we do not open the popup toolbar, all other times we only open the pop-up toolbar.
+
+----------
+
+The final phase of this project is to add support for using HTML and Markdown to get and set content instead of the now hidden RTF property. But first we need to create two properties called EnableCommonMarkdown and EnableGithubMarkdown. These properties disables all formatting options not available to the CommonMark and GitHub flavors of markdown. If GitHub markdown is true then CommonMark must also be true, but GitHub markdown may be disabled even when CommonMark is enabled.
+
+Next we need to add a string property named "Markdown" that, when set converts the markdown string to the proper TOM2 document information and sets the rich text editor to that document, and when read by the user, converts the TOM2 document to the appropriate flavor of markdown. For now we will only do the TOM2 to Markdown conversion (property getter). Use a StringBuilder with a large initial size for building the returned markdown string. Place the read method in a separate class named MarkdownFormatter.
+Now let's implement a FromMarkdown method in the MarkdownFormatter class and add setter to the Markdown property in the RichEditBox class.
+
+Here is an idea, in order to more closely align with HTML and Markdown, let's add a selector-list to the PopupToolbar that includes all of the HTML/Markdown heading sizes (Heading 1, 2, etc.), paragraphs, and pre-formatted blocks. Then add a property to RichEditBox named EnableHtmlFontSizing that hides the Font-Size selector and replaces it with the HTML heading size selector. Additionally both markdown modes should force the EnableHtmlFontSizing property to be set to true as Markdown does not support font face/size formating. Finally, update the Markdown import/export code in MarkdownFormatter to use the HTML heading sizes.
+
+The last task for this project is to implement HTML reading and writing. Since this is a massive task we will break it apart into multiple steps. For the first step we will implement reading a valid HTML5+CSS fragment (html/body tags are not required but should be discarded if included) and generate the valid TOM2 document to be used by the Html property in the RichEditBox. We will place the Html parsing code in the file named HtmlFormatter.cs. The available HTML formatting operations can be found in RichEditBox. For now, we will not handle images as we will implement special rules for handling those. We will also not implement font-face, font-size, headings/pre-formatted, and text alignments to reduce complexity. Please us MarkdownFormatter as a guide for generating TOM2 documents as it includes some special cases.
+
+Now let's add HTML read support for text alignments and font-face and font-size handling. Please note that we added support for HTML headings and pre-formatted text that will need to be supported in addition to specific fonts/sizes. 
+
+Finally, let's add support for images. This project has two different methods of utilizing images in the RichEditBox control. The first method is to read the embedded image directly from the HTML fragment as a websafe Base64 encoded image. The second method is a hyperlink to the full image with an embedded thumbnail image stored as websafe Base64 inside the hyperlink. In both cases we we will NOT follow the link to download the image, instead, if the embedded image data is corrupted we will instead display a placeholder image.
+
+Now we need to test the new code for reading HTML fragments. To do so, let's add an HTML document string to the Activated event handler in Form1.cs file. This HTML should test all the current formatting options supported by the RichEditBox control. Please use the existing markdown as a template, but expanded to include all supported formatting options. The existing markdown should be left in place for testing purposes.
+
+Now that reading HTML is complete, we need to add the HTML emitter to HtmlFormatter. The available HTML formatting operations can be found in RichEditBox. For now, we will not handle images as we will implement special rules for handling those. We will also not implement font-face, font-size, headings/pre-formatted, and text alignments to reduce complexity. Please us MarkdownFormatter as a guide for generating HTML fragments as it includes some special cases.
+
+Now let's add HTML write support for text alignments and font-face and font-size handling. Please note that we added support for HTML headings and pre-formatted text that will need to be supported in addition to specific fonts/sizes. The difficulty here is that the HTML supports both Headings as well as specific font sizes, but TOM2 only supports specific text sizes, which means that we must map headings to specific font sizes. Perhaps the solution is to check the status of EnableHtmlFontSizing in RIchEdit and determine what to emit from there?
+
+Finally, let's add write support for images. This project has two different methods of utilizing images in the RichEditBox control. The first method is to write the embedded image directly to the HTML fragment as a websafe Base64 encoded image. The second method is to write a hyperlink to the source image with an embedded thumbnail image stored as websafe Base64 inside the hyperlink. In both cases we we will NOT follow the link to download the image, the image date must come from the document.
+
+We need to handle HTML that describes text formatting options that we currently don't support in the RichTextBox control. To achieve this we will implement a 'strict' mode for loading HTML. First we need a property named "EnableStrictHtml" that when true will cause the FromHTML method to throw an exception when it encounters an HTML tag/attribute/css-selector that is we have not yet implemented. When the property is false, we will accept the unsupported HTML and silently drop it.
+
+Consider the two files HtmlInput (which we loaded into the Html property) and the HtmlOutput, which is what we received back out from the Html property after setting the test document. Is there any way to make the output less verbose and more closely match the input? For example, there are many empty blocks with the default font specified.
+
+
+
+
+

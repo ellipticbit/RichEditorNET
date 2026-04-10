@@ -13,9 +13,554 @@ namespace EllipticBit.RichEditorNET
 {
 	internal static class HtmlFormatter
 	{
-		internal static string ToHtml(ITextDocument2 doc) { return string.Empty; }
+		internal static string ToHtml(ITextDocument2 doc, bool htmlFontSizing, string defaultFontName = "", float defaultFontSize = 0f) {
+			var sb = new StringBuilder(4096);
+			var probe = doc.Range2(0, 0);
+			int storyLength;
+			try {
+				storyLength = probe.StoryLength;
+			}
+			finally {
+				Marshal.ReleaseComObject(probe);
+			}
 
-		internal static void FromHtml(ITextDocument2 doc, string html) {
+			int pos = 0;
+			var listTypeStack = new List<int>();
+			var liOpenStack = new List<bool>();
+
+			while (pos < storyLength) {
+				var paraRange = doc.Range2(pos, pos);
+				try {
+					paraRange.Expand(tomConstants.tomParagraph);
+					int paraStart = paraRange.Start;
+					int paraEnd = paraRange.End;
+					int textEnd = paraEnd > paraStart ? paraEnd - 1 : paraEnd;
+
+					var para = paraRange.Para;
+					int listType;
+					int listLevel;
+					int alignment;
+					try {
+						listType = para.ListType & 0xFFFF;
+						listLevel = para.ListLevelIndex;
+						alignment = para.Alignment;
+						if (alignment < 0 || alignment > 3) alignment = tomConstants.tomAlignLeft;
+					}
+					finally {
+						Marshal.ReleaseComObject(para);
+					}
+
+					bool isList = listType != tomConstants.tomListNone;
+
+					int headingLevel = 0;
+					bool preformatted = false;
+					if (!isList && textEnd > paraStart) {
+						var probeChar = doc.Range2(paraStart, paraStart + 1);
+						try {
+							var pFont = probeChar.Font;
+							try {
+								var blockStyle = BlockStyleHelper.GetBlockStyleFromFont(pFont.Size, pFont.Bold == tomConstants.tomTrue, pFont.Name);
+								if (blockStyle != BlockStyle.Paragraph && blockStyle != BlockStyle.Preformatted)
+									headingLevel = (int)blockStyle;
+								else if (blockStyle == BlockStyle.Preformatted)
+									preformatted = true;
+							}
+							finally {
+								Marshal.ReleaseComObject(pFont);
+							}
+						}
+						finally {
+							Marshal.ReleaseComObject(probeChar);
+						}
+					}
+
+					if (isList) {
+						int targetDepth = listLevel + 1;
+
+						while (listTypeStack.Count > targetDepth) {
+							int top = listTypeStack.Count - 1;
+							if (liOpenStack[top]) sb.Append("</li>");
+							sb.Append(GetEmitListCloseTag(listTypeStack[top]));
+							listTypeStack.RemoveAt(top);
+							liOpenStack.RemoveAt(top);
+						}
+
+						if (listTypeStack.Count == targetDepth) {
+							int top = listTypeStack.Count - 1;
+							if (listTypeStack[top] != listType) {
+								if (liOpenStack[top]) sb.Append("</li>");
+								sb.Append(GetEmitListCloseTag(listTypeStack[top]));
+								listTypeStack.RemoveAt(top);
+								liOpenStack.RemoveAt(top);
+							}
+							else if (liOpenStack[top]) {
+								sb.Append("</li>");
+								liOpenStack[top] = false;
+							}
+						}
+
+						while (listTypeStack.Count < targetDepth) {
+							if (listTypeStack.Count > 0 && !liOpenStack[listTypeStack.Count - 1]) {
+								sb.Append("<li>");
+								liOpenStack[listTypeStack.Count - 1] = true;
+							}
+							sb.Append(GetEmitListOpenTag(listType));
+							listTypeStack.Add(listType);
+							liOpenStack.Add(false);
+						}
+
+						sb.Append("<li");
+						if (alignment != tomConstants.tomAlignLeft)
+							sb.Append(" style=\"text-align: ").Append(AlignmentToCss(alignment)).Append("\"");
+						sb.Append('>');
+						liOpenStack[liOpenStack.Count - 1] = true;
+
+						if (textEnd > paraStart)
+							EmitHtmlInlineContent(doc, sb, paraStart, textEnd, !htmlFontSizing, false, defaultFontName, defaultFontSize);
+					}
+					else {
+						CloseAllLists(sb, listTypeStack, liOpenStack);
+
+						string tag = "p";
+						if (headingLevel > 0) tag = "h" + headingLevel;
+						else if (preformatted) tag = "pre";
+
+						sb.Append('<').Append(tag);
+						if (alignment != tomConstants.tomAlignLeft)
+							sb.Append(" style=\"text-align: ").Append(AlignmentToCss(alignment)).Append("\"");
+						sb.Append('>');
+
+						string baseFont = defaultFontName;
+						float baseSize = defaultFontSize;
+						if (headingLevel > 0) {
+							baseSize = BlockStyleHelper.HeadingPointSizes[headingLevel];
+						} else if (preformatted) {
+							baseFont = BlockStyleHelper.PreformattedFontName;
+							baseSize = BlockStyleHelper.PreformattedPointSize;
+						}
+						if (textEnd > paraStart)
+							EmitHtmlInlineContent(doc, sb, paraStart, textEnd, !htmlFontSizing, headingLevel > 0, baseFont, baseSize);
+						sb.Append("</").Append(tag).Append('>');
+					}
+
+					pos = paraEnd;
+					if (pos <= paraStart) pos = paraStart + 1;
+				}
+				finally {
+					Marshal.ReleaseComObject(paraRange);
+				}
+			}
+
+			CloseAllLists(sb, listTypeStack, liOpenStack);
+			return sb.ToString();
+		}
+
+		#region - HTML Emission -
+
+		private static void EmitHtmlInlineContent(ITextDocument2 doc, StringBuilder sb, int start, int end, bool emitFontStyles, bool suppressBold, string defaultFontName = "", float defaultFontSize = 0f) {
+			bool curBold = false, curItalic = false, curStrike = false, curSup = false, curSub = false;
+			int curUnderline = 0, curFore = tomConstants.tomAutoColor, curBack = tomConstants.tomAutoColor;
+			string curUrl = string.Empty;
+			string curFontName = string.Empty;
+			float curFontSize = 0f;
+			bool tagsOpen = false;
+
+			var runRange = doc.Range2(start, start);
+			try {
+				while (runRange.Start < end) {
+					int moved = runRange.MoveEnd(tomConstants.tomCharFormat, 1);
+					if (moved == 0) break;
+					if (runRange.End > end) runRange.End = end;
+
+					int ch = runRange.Char;
+						if (ch == 0xFFFC) {
+							if (tagsOpen) {
+								CloseHtmlInlineTags(sb, curBold, curItalic, curStrike, curUnderline, curSup, curSub, curFore, curBack, curUrl, curFontName, curFontSize);
+								tagsOpen = false;
+								curBold = false; curItalic = false; curStrike = false; curSup = false; curSub = false;
+								curUnderline = 0; curFore = tomConstants.tomAutoColor; curBack = tomConstants.tomAutoColor;
+								curUrl = string.Empty;
+								curFontName = string.Empty; curFontSize = 0f;
+							}
+							EmitImageTag(doc, sb, runRange.Start);
+							runRange.SetRange(runRange.Start + 1, runRange.Start + 1);
+							continue;
+						}
+
+					var font = runRange.Font;
+					bool newBold, newItalic, newStrike, newSup, newSub;
+					int newUnderline, newFore, newBack;
+					string newFontName = string.Empty;
+					float newFontSize = 0f;
+					try {
+						newBold = !suppressBold && font.Bold == tomConstants.tomTrue;
+						newItalic = font.Italic == tomConstants.tomTrue;
+						newStrike = font.StrikeThrough == tomConstants.tomTrue;
+						newSup = font.Superscript == tomConstants.tomTrue;
+						newSub = font.Subscript == tomConstants.tomTrue;
+						newUnderline = font.Underline;
+						newFore = font.ForeColor;
+						newBack = font.BackColor;
+						if (emitFontStyles) {
+							newFontName = font.Name ?? string.Empty;
+							if (newFontName.Equals(defaultFontName, StringComparison.OrdinalIgnoreCase))
+								newFontName = string.Empty;
+							newFontSize = font.Size;
+							if (newFontSize < 0) newFontSize = 0f;
+							if (defaultFontSize > 0 && Math.Abs(newFontSize - defaultFontSize) < 0.5f)
+								newFontSize = 0f;
+						}
+					}
+					finally {
+						Marshal.ReleaseComObject(font);
+					}
+
+					if (newUnderline <= 0)
+						newUnderline = 0;
+					else if (newUnderline != (int)UnderlineStyle.Single &&
+						newUnderline != (int)UnderlineStyle.Double &&
+						newUnderline != (int)UnderlineStyle.Dotted &&
+						newUnderline != (int)UnderlineStyle.Dashed &&
+						newUnderline != (int)UnderlineStyle.Wavy)
+						newUnderline = (int)UnderlineStyle.Single;
+
+					string newUrl = GetEmitCleanUrl(runRange.URL);
+
+					bool changed = newBold != curBold || newItalic != curItalic || newStrike != curStrike ||
+						newUnderline != curUnderline || newSup != curSup || newSub != curSub ||
+						newFore != curFore || newBack != curBack || newUrl != curUrl ||
+						newFontName != curFontName || Math.Abs(newFontSize - curFontSize) > 0.01f;
+
+					if (changed && tagsOpen) {
+						CloseHtmlInlineTags(sb, curBold, curItalic, curStrike, curUnderline, curSup, curSub, curFore, curBack, curUrl, curFontName, curFontSize);
+						tagsOpen = false;
+					}
+
+					bool hasFormatting = newBold || newItalic || newStrike || newUnderline != 0 ||
+						newSup || newSub || newFore != tomConstants.tomAutoColor || newBack != tomConstants.tomAutoColor ||
+						newUrl.Length > 0 || NeedsStyleSpan(newFore, newBack, newUnderline, newFontName, newFontSize);
+
+					if (hasFormatting && !tagsOpen) {
+						OpenHtmlInlineTags(sb, newBold, newItalic, newStrike, newUnderline, newSup, newSub, newFore, newBack, newUrl, newFontName, newFontSize);
+						tagsOpen = true;
+					}
+
+					curBold = newBold; curItalic = newItalic; curStrike = newStrike;
+					curUnderline = newUnderline; curSup = newSup; curSub = newSub;
+					curFore = newFore; curBack = newBack; curUrl = newUrl;
+					curFontName = newFontName; curFontSize = newFontSize;
+
+					string text = runRange.Text;
+					if (text != null) {
+						if (curUrl.Length > 0)
+							text = StripEmitHyperlinkFieldCode(text);
+						if (text.Length > 0)
+							sb.Append(WebUtility.HtmlEncode(text));
+					}
+
+					runRange.Collapse(tomConstants.tomCollapseEnd);
+				}
+
+				if (tagsOpen)
+					CloseHtmlInlineTags(sb, curBold, curItalic, curStrike, curUnderline, curSup, curSub, curFore, curBack, curUrl, curFontName, curFontSize);
+			}
+			finally {
+				Marshal.ReleaseComObject(runRange);
+			}
+		}
+
+		private static void OpenHtmlInlineTags(StringBuilder sb, bool bold, bool italic, bool strike,
+			int underline, bool sup, bool sub, int foreColor, int backColor, string url,
+			string fontName, float fontSize) {
+			if (url.Length > 0)
+				sb.Append("<a href=\"").Append(WebUtility.HtmlEncode(url)).Append("\">");
+			if (bold) sb.Append("<b>");
+			if (italic) sb.Append("<i>");
+			if (strike) sb.Append("<s>");
+			if (underline == (int)UnderlineStyle.Single) sb.Append("<u>");
+			if (sup) sb.Append("<sup>");
+			if (sub) sb.Append("<sub>");
+			if (NeedsStyleSpan(foreColor, backColor, underline, fontName, fontSize))
+				sb.Append("<span style=\"").Append(BuildSpanStyle(foreColor, backColor, underline, fontName, fontSize)).Append("\">");
+		}
+
+		private static void CloseHtmlInlineTags(StringBuilder sb, bool bold, bool italic, bool strike,
+			int underline, bool sup, bool sub, int foreColor, int backColor, string url,
+			string fontName, float fontSize) {
+			if (NeedsStyleSpan(foreColor, backColor, underline, fontName, fontSize)) sb.Append("</span>");
+			if (sub) sb.Append("</sub>");
+			if (sup) sb.Append("</sup>");
+			if (underline == (int)UnderlineStyle.Single) sb.Append("</u>");
+			if (strike) sb.Append("</s>");
+			if (italic) sb.Append("</i>");
+			if (bold) sb.Append("</b>");
+			if (url.Length > 0) sb.Append("</a>");
+		}
+
+		private static bool NeedsStyleSpan(int foreColor, int backColor, int underline, string fontName, float fontSize) {
+			return foreColor != tomConstants.tomAutoColor || backColor != tomConstants.tomAutoColor ||
+				(underline > 0 && underline != (int)UnderlineStyle.Single) ||
+				fontName.Length > 0 ||
+				fontSize > 0;
+		}
+
+		private static string BuildSpanStyle(int foreColor, int backColor, int underline, string fontName, float fontSize) {
+			var sb = new StringBuilder();
+			if (fontName.Length > 0)
+				sb.Append("font-family: '").Append(fontName).Append("'");
+			if (fontSize > 0) {
+				if (sb.Length > 0) sb.Append("; ");
+				sb.Append("font-size: ").Append(fontSize.ToString("0.##", CultureInfo.InvariantCulture)).Append("pt");
+			}
+			if (foreColor != tomConstants.tomAutoColor) {
+				if (sb.Length > 0) sb.Append("; ");
+				sb.Append("color: ").Append(OleColorToCss(foreColor));
+			}
+			if (backColor != tomConstants.tomAutoColor) {
+				if (sb.Length > 0) sb.Append("; ");
+				sb.Append("background-color: ").Append(OleColorToCss(backColor));
+			}
+			if (underline > 0 && underline != (int)UnderlineStyle.Single) {
+				if (sb.Length > 0) sb.Append("; ");
+				sb.Append("text-decoration: underline; text-decoration-style: ").Append(GetCssTextDecorationStyle(underline));
+			}
+			return sb.ToString();
+		}
+
+		private static string GetCssTextDecorationStyle(int underlineValue) {
+			switch (underlineValue) {
+				case (int)UnderlineStyle.Double: return "double";
+				case (int)UnderlineStyle.Dotted: return "dotted";
+				case (int)UnderlineStyle.Dashed: return "dashed";
+				case (int)UnderlineStyle.Wavy: return "wavy";
+				default: return "solid";
+			}
+		}
+
+		private static string OleColorToCss(int oleColor) {
+			var c = ColorTranslator.FromOle(oleColor);
+			return "#" + c.R.ToString("x2") + c.G.ToString("x2") + c.B.ToString("x2");
+		}
+
+		private static string AlignmentToCss(int alignment) {
+			switch (alignment) {
+				case tomConstants.tomAlignCenter: return "center";
+				case tomConstants.tomAlignRight: return "right";
+				case tomConstants.tomAlignJustify: return "justify";
+				default: return "left";
+			}
+		}
+
+		private static string GetEmitListOpenTag(int listType) {
+			switch (listType) {
+				case tomConstants.tomListBullet: return "<ul>";
+				case tomConstants.tomListNumberAsLCLetter: return "<ol type=\"a\">";
+				case tomConstants.tomListNumberAsUCLetter: return "<ol type=\"A\">";
+				case tomConstants.tomListNumberAsLCRoman: return "<ol type=\"i\">";
+				case tomConstants.tomListNumberAsUCRoman: return "<ol type=\"I\">";
+				default: return "<ol>";
+			}
+		}
+
+		private static string GetEmitListCloseTag(int listType) {
+			return listType == tomConstants.tomListBullet ? "</ul>" : "</ol>";
+		}
+
+		private static void CloseAllLists(StringBuilder sb, List<int> listTypeStack, List<bool> liOpenStack) {
+			while (listTypeStack.Count > 0) {
+				int top = listTypeStack.Count - 1;
+				if (liOpenStack[top]) sb.Append("</li>");
+				sb.Append(GetEmitListCloseTag(listTypeStack[top]));
+				listTypeStack.RemoveAt(top);
+				liOpenStack.RemoveAt(top);
+			}
+		}
+
+		private static string GetEmitCleanUrl(string url) {
+			if (string.IsNullOrEmpty(url)) return string.Empty;
+			if (url.Length >= 2 && url[0] == '"' && url[url.Length - 1] == '"')
+				return url.Substring(1, url.Length - 2);
+			return url;
+		}
+
+		private static string StripEmitHyperlinkFieldCode(string text) {
+			if (!text.StartsWith("HYPERLINK \"", StringComparison.Ordinal)) return text;
+			int endQuote = text.IndexOf('"', 11);
+			if (endQuote < 0) return text;
+			return text.Substring(endQuote + 1);
+		}
+
+		private static void EmitImageTag(ITextDocument2 doc, StringBuilder sb, int imgPos) {
+			var imgRange = doc.Range2(imgPos, imgPos + 1);
+			try {
+				string url = GetEmitCleanUrl(imgRange.URL);
+				string altText = string.Empty;
+				try { altText = imgRange.GetText2(tomConstants.tomTextize) ?? string.Empty; }
+				catch { }
+
+				byte[] imageData = null;
+				int widthPx = 0, heightPx = 0;
+
+				object embeddedObj = null;
+				try {
+					embeddedObj = imgRange.GetEmbeddedObject();
+					if (embeddedObj != null)
+						imageData = ExtractImageData(embeddedObj, out widthPx, out heightPx);
+				}
+				catch { }
+				finally {
+					if (embeddedObj != null) {
+						try { Marshal.ReleaseComObject(embeddedObj); } catch { }
+					}
+				}
+
+				if (imageData == null || imageData.Length == 0) return;
+
+				string mimeType = GetEmitImageMimeType(imageData);
+				string base64 = ToWebSafeBase64(imageData);
+
+				if (url.Length > 0)
+					sb.Append("<a href=\"").Append(WebUtility.HtmlEncode(url)).Append("\">");
+
+				sb.Append("<img src=\"data:").Append(mimeType).Append(";base64,").Append(base64).Append('"');
+				if (altText.Length > 0)
+					sb.Append(" alt=\"").Append(WebUtility.HtmlEncode(altText)).Append('"');
+				if (widthPx > 0)
+					sb.Append(" width=\"").Append(widthPx).Append('"');
+				if (heightPx > 0)
+					sb.Append(" height=\"").Append(heightPx).Append('"');
+				sb.Append(" />");
+
+				if (url.Length > 0)
+					sb.Append("</a>");
+			}
+			finally {
+				Marshal.ReleaseComObject(imgRange);
+			}
+		}
+
+		private static byte[] ExtractImageData(object embeddedObj, out int widthPx, out int heightPx) {
+			widthPx = 0;
+			heightPx = 0;
+
+			if (embeddedObj is IPicture picture) {
+				byte[] data = TryExtractViaPicture(picture, out widthPx, out heightPx);
+				if (data != null && data.Length > 0) return data;
+			}
+
+			if (embeddedObj is System.Runtime.InteropServices.ComTypes.IDataObject dataObj) {
+				byte[] data = TryExtractViaEnhMetafile(dataObj, out widthPx, out heightPx);
+				if (data != null && data.Length > 0) return data;
+			}
+
+			return null;
+		}
+
+		private static byte[] TryExtractViaPicture(IPicture picture, out int widthPx, out int heightPx) {
+			widthPx = 0;
+			heightPx = 0;
+			try {
+				widthPx = HimetricToPixels(picture.get_Width());
+				heightPx = HimetricToPixels(picture.get_Height());
+				if (widthPx <= 0 || heightPx <= 0) return null;
+
+				int hr = PInvoke.CreateStreamOnHGlobal(IntPtr.Zero, true, out var stream);
+				if (hr != 0) return null;
+				try {
+					picture.SaveAsFile(stream, true, out int cbSize);
+					if (cbSize <= 0) return null;
+
+					stream.Seek(0, 0, IntPtr.Zero);
+					byte[] data = new byte[cbSize];
+					stream.Read(data, cbSize, IntPtr.Zero);
+
+					if (data.Length >= 2 && data[0] == 0x42 && data[1] == 0x4D) {
+						try {
+							using (var ms = new MemoryStream(data))
+							using (var image = Image.FromStream(ms))
+							using (var outMs = new MemoryStream()) {
+								image.Save(outMs, ImageFormat.Png);
+								return outMs.ToArray();
+							}
+						}
+						catch { return data; }
+					}
+
+					return data;
+				}
+				finally {
+					Marshal.ReleaseComObject(stream);
+				}
+			}
+			catch { return null; }
+		}
+
+		private const short CF_ENHMETAFILE = 14;
+
+		private static byte[] TryExtractViaEnhMetafile(System.Runtime.InteropServices.ComTypes.IDataObject dataObj, out int widthPx, out int heightPx) {
+			widthPx = 0;
+			heightPx = 0;
+
+			var fmtetc = new System.Runtime.InteropServices.ComTypes.FORMATETC {
+				cfFormat = CF_ENHMETAFILE,
+				dwAspect = System.Runtime.InteropServices.ComTypes.DVASPECT.DVASPECT_CONTENT,
+				lindex = -1,
+				ptd = IntPtr.Zero,
+				tymed = System.Runtime.InteropServices.ComTypes.TYMED.TYMED_ENHMF
+			};
+
+			System.Runtime.InteropServices.ComTypes.STGMEDIUM stgm;
+			try { dataObj.GetData(ref fmtetc, out stgm); }
+			catch { return null; }
+
+			try {
+				if (stgm.unionmember == IntPtr.Zero) return null;
+
+				using (var metafile = new Metafile(stgm.unionmember, false)) {
+					widthPx = metafile.Width;
+					heightPx = metafile.Height;
+					if (widthPx <= 0 || heightPx <= 0) return null;
+
+					using (var bmp = new Bitmap(widthPx, heightPx))
+					using (var g = Graphics.FromImage(bmp)) {
+						g.Clear(Color.Transparent);
+						g.DrawImage(metafile, 0, 0, widthPx, heightPx);
+						using (var ms = new MemoryStream()) {
+							bmp.Save(ms, ImageFormat.Png);
+							return ms.ToArray();
+						}
+					}
+				}
+			}
+			catch { return null; }
+			finally {
+				PInvoke.ReleaseStgMedium(ref stgm);
+			}
+		}
+
+		private static int HimetricToPixels(int himetric) {
+			return (int)((long)himetric * 96 / 2540);
+		}
+
+		private static string GetEmitImageMimeType(byte[] data) {
+			if (data.Length >= 4) {
+				if (data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47)
+					return "image/png";
+				if (data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF)
+					return "image/jpeg";
+				if (data[0] == 0x47 && data[1] == 0x49 && data[2] == 0x46)
+					return "image/gif";
+			}
+			return "image/png";
+		}
+
+		private static string ToWebSafeBase64(byte[] data) {
+			return Convert.ToBase64String(data).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+		}
+
+		#endregion
+
+		internal static void FromHtml(ITextDocument2 doc, string html, bool strict = false) {
 			if (html == null) throw new ArgumentNullException(nameof(html));
 
 			doc.Freeze();
@@ -35,7 +580,7 @@ namespace EllipticBit.RichEditorNET
 					}
 
 					var tokens = Tokenize(html);
-					var blocks = BuildBlocks(tokens);
+					var blocks = BuildBlocks(tokens, strict);
 					InsertBlocks(doc, blocks);
 				}
 				finally {
@@ -257,7 +802,83 @@ namespace EllipticBit.RichEditorNET
 
 		private static readonly char[] TrimmableWhitespace = { ' ', '\t', '\r', '\n', '\f' };
 
-		private static List<ParagraphBlock> BuildBlocks(List<HtmlToken> tokens) {
+		private static readonly HashSet<string> SupportedTags = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+			"b", "strong", "i", "em", "u", "ins", "s", "del", "strike", "sup", "sub",
+			"mark", "a", "code", "kbd", "tt", "samp", "font", "span", "img", "br",
+			"p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "pre", "ul", "ol", "li", "center", "hr",
+			"html", "body",
+			"style", "script", "head", "title", "noscript"
+		};
+
+		private static readonly HashSet<string> SupportedCssProperties = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+			"font-weight", "font-style", "text-decoration", "text-decoration-line", "text-decoration-style",
+			"color", "background-color", "vertical-align", "text-align", "font-family", "font-size",
+			"list-style-type", "list-style"
+		};
+
+		private static void ValidateToken(HtmlToken token) {
+			if (token.Type == TokenType.Text) return;
+
+			string tagName = token.TagName;
+			if (!SupportedTags.Contains(tagName))
+				throw new NotSupportedException("Unsupported HTML tag: '" + tagName + "'.");
+
+			if (token.Type == TokenType.CloseTag ||
+				IgnoredContentElements.Contains(tagName) ||
+				tagName == "html" || tagName == "body")
+				return;
+
+			if (token.Attributes != null) {
+				foreach (var kvp in token.Attributes) {
+					if (!IsAttributeSupported(tagName, kvp.Key))
+						throw new NotSupportedException("Unsupported attribute '" + kvp.Key + "' on HTML tag '" + tagName + "'.");
+				}
+
+				if (token.Attributes.TryGetValue("style", out string style))
+					ValidateCssProperties(tagName, style);
+			}
+		}
+
+		private static bool IsAttributeSupported(string tagName, string attrName) {
+			switch (attrName.ToLowerInvariant()) {
+				case "style":
+				case "align":
+					return true;
+			}
+
+			switch (tagName) {
+				case "a":
+					return attrName.Equals("href", StringComparison.OrdinalIgnoreCase);
+				case "img":
+					switch (attrName.ToLowerInvariant()) {
+						case "src": case "alt": case "width": case "height": return true;
+						default: return false;
+					}
+				case "font":
+					switch (attrName.ToLowerInvariant()) {
+						case "face": case "size": case "color": return true;
+						default: return false;
+					}
+				case "ol":
+					return attrName.Equals("type", StringComparison.OrdinalIgnoreCase);
+			}
+
+			return false;
+		}
+
+		private static void ValidateCssProperties(string tagName, string style) {
+			var declarations = style.Split(';');
+			foreach (var decl in declarations) {
+				int colon = decl.IndexOf(':');
+				if (colon < 0) continue;
+				string property = decl.Substring(0, colon).Trim().ToLowerInvariant();
+				if (property.Length == 0) continue;
+				if (!SupportedCssProperties.Contains(property))
+					throw new NotSupportedException("Unsupported CSS property '" + property + "' on HTML tag '" + tagName + "'.");
+			}
+		}
+
+		private static List<ParagraphBlock> BuildBlocks(List<HtmlToken> tokens, bool strict) {
 			var blocks = new List<ParagraphBlock>();
 			var styleStack = new List<StyleEntry>();
 			var listStack = new List<int>();
@@ -280,6 +901,9 @@ namespace EllipticBit.RichEditorNET
 						ignoreDepth--;
 					continue;
 				}
+
+				if (strict)
+					ValidateToken(token);
 
 				switch (token.Type) {
 					case TokenType.Text:
