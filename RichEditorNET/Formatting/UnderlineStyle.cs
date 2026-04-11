@@ -1,4 +1,4 @@
-namespace EllipticBit.RichEditorNET
+namespace EllipticBit.RichEditorNET.Formatting
 {
 	/// <summary>
 	/// Specifies the underline style to apply. Values correspond to HTML5/CSS text-decoration-style options.

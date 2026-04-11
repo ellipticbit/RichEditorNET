@@ -1,0 +1,57 @@
+# RichEditorNET Build Script
+
+.before_script_template:
+    before_script:
+      - "git clean -fdxq"
+      - "pwsh -f ./ReplaceVersion.ps1"
+
+stages:
+  - build
+  - publish
+  - post
+
+Build RichEditorNET Package:
+  extends: .before_script_template
+  stage: build
+  tags:
+    - linux
+    - dotnet
+  only:
+    refs:
+      - dev
+    changes:
+      - RichEditorNET/**/*
+
+  script:
+    - "dotnet restore ./RichEditorNET/RichEditorNET.csproj"
+    - "dotnet build -c Release ./RichEditorNET/RichEditorNET.csproj"
+
+Publish RichEditorNET Package:
+  extends: .before_script_template
+  stage: publish
+  tags:
+    - linux
+    - dotnet
+  only:
+    refs:
+      - master
+    changes:
+      - RichEditorNET/**/*
+
+  script:
+    - "dotnet restore ./RichEditorNET/RichEditorNET.csproj"
+    - "dotnet build -c Release ./RichEditorNET/RichEditorNET.csproj"
+    - "dotnet nuget push ./RichEditorNET/RichEditorNET/**/Release/*.nupkg -s \"https://api.nuget.org/v3/index.json\" -k $NUGET_TOKEN --skip-duplicate"
+
+Increment Build Counter:
+  stage: post
+  tags:
+    - linux
+    - dotnet
+  only:
+    refs:
+      - master
+    changes:
+      - RichEditorNET/**/*
+  script:
+    - "pwsh -f ./IncrementVersion.ps1"

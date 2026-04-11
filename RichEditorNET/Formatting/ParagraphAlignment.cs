@@ -1,6 +1,6 @@
 using EllipticBit.RichEditorNET.TextObjectModel2;
 
-namespace EllipticBit.RichEditorNET
+namespace EllipticBit.RichEditorNET.Formatting
 {
 	/// <summary>
 	/// Specifies paragraph alignment. Values correspond to HTML5/CSS text-align options.

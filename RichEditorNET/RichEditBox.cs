@@ -6,6 +6,9 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+
+using EllipticBit.RichEditorNET.Formatting;
+using EllipticBit.RichEditorNET.Support;
 using EllipticBit.RichEditorNET.TextObjectModel2;
 
 namespace EllipticBit.RichEditorNET

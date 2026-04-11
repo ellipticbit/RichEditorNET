@@ -4,6 +4,8 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+
+using EllipticBit.RichEditorNET.Formatting;
 using EllipticBit.RichEditorNET.TextObjectModel2;
 
 namespace EllipticBit.RichEditorNET

@@ -1,6 +1,6 @@
 using System;
 
-namespace EllipticBit.RichEditorNET
+namespace EllipticBit.RichEditorNET.Formatting
 {
 	/// <summary>
 	/// Defines block-level styles that map to HTML heading elements,

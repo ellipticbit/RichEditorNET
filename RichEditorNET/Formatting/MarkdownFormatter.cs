@@ -2,9 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
+
 using EllipticBit.RichEditorNET.TextObjectModel2;
 
-namespace EllipticBit.RichEditorNET
+namespace EllipticBit.RichEditorNET.Formatting
 {
 	internal static class MarkdownFormatter
 	{

@@ -1,6 +1,6 @@
 using EllipticBit.RichEditorNET.TextObjectModel2;
 
-namespace EllipticBit.RichEditorNET
+namespace EllipticBit.RichEditorNET.Formatting
 {
 	/// <summary>
 	/// Specifies the list style to apply. Values correspond to HTML5/CSS list-style-type options.

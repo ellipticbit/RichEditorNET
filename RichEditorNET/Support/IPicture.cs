@@ -1,7 +1,8 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace EllipticBit.RichEditorNET
+
+namespace EllipticBit.RichEditorNET.Support
 {
 	/// <summary>
 	/// COM IPicture interface for extracting image data from OLE embedded objects.

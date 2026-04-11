@@ -6,19 +6,33 @@
 		<AssemblyName>RichEditorNET</AssemblyName>
 		<RootNamespace>EllipticBit.RichEditorNET</RootNamespace>
 		<Nullable>enable</Nullable>
+		<DebugType>embedded</DebugType>
 		<EnableWindowsTargeting>true</EnableWindowsTargeting>
+		<NeutralLanguage>en</NeutralLanguage>
+		<LangVersion>latest</LangVersion>
 		<Authors>EllipticBit LLC</Authors>
 		<Company>EllipticBit LLC</Company>
 		<Product>RichEditor.NET</Product>
-		<PackageId>RichEditor.NET</PackageId>
-		<Version>1.0.0.0</Version>
-		<FileVersion>1.0.0.0</FileVersion>
-		<AssemblyVersion>1.0.0.0</AssemblyVersion>
-		<PackageIconUrl>https://technique.blob.core.windows.net/technique-deploy/app.ico</PackageIconUrl>
+		<Version>0.0.0</Version>
+		<FileVersion>0.0.0.0</FileVersion>
+		<AssemblyVersion>0.0.0.0</AssemblyVersion>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<Copyright>Copyright (c) 2026 EllipticBit, LLC</Copyright>
+		<PackageId>EllipticBit.RichEditorNET</PackageId>
+		<PackageLicenseExpression>BSL-1.0</PackageLicenseExpression>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageIcon>icon.png</PackageIcon>
 		<Copyright>Copyright © EllipticBit LLC 2026</Copyright>
-		<Description>This library provides a modern replacement for the traditional Rich Text Editor available in Windows Forms applications.</Description>
-		<NeutralLanguage>en</NeutralLanguage>
-		<LangVersion>latest</LangVersion>
+		<Description>This library provides a modern replacement for the traditional RichTextBox available in Windows Forms applications.</Description>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<None Include="..\icon.png" Pack="true" PackagePath="\" />
+		<None Include="..\README.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.201" PrivateAssets="All" />
+	</ItemGroup>
 </Project>
