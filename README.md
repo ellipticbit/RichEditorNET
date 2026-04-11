@@ -1,6 +1,6 @@
 # RichEditor.NET
 
-[![NuGet](https://img.shields.io/nuget/v/RichEditorNET.svg)](https://www.nuget.org/packages/RichEditorNET)
+[![NuGet](https://img.shields.io/nuget/v/EllipticBit.RichEditorNET.svg)](https://www.nuget.org/packages/EllipticBit.RichEditorNET/)
 [![License](https://img.shields.io/badge/license-BSL--1.0-blue.svg)](https://opensource.org/licenses/BSL-1.0)
 
 A modern, feature-rich replacement for the traditional `RichTextBox` control in Windows Forms applications. RichEditor.NET leverages the Windows Text Object Model 2 (TOM2) via the RichEdit 4.1 control (`msftedit.dll`) to provide advanced text and image formatting, built-in spell checking, a context-menu popup toolbar, and first-class HTML and Markdown serialization.
@@ -55,13 +55,13 @@ A modern, feature-rich replacement for the traditional `RichTextBox` control in 
 Install via the .NET CLI:
 
 ```
-dotnet add package RichEditor.NET
+dotnet add package EllipticBit.RichEditorNET
 ```
 
 Or via the Package Manager Console in Visual Studio:
 
 ```
-Install-Package RichEditor.NET
+Install-Package EllipticBit.RichEditorNET
 ```
 
 ## Usage
