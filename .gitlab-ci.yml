@@ -20,6 +20,7 @@ Build RichEditorNET Package:
     refs:
       - dev
     changes:
+      - .gitlab-ci.yml
       - RichEditorNET/**/*
 
   script:
@@ -36,12 +37,13 @@ Publish RichEditorNET Package:
     refs:
       - master
     changes:
+      - .gitlab-ci.yml
       - RichEditorNET/**/*
 
   script:
     - "dotnet restore ./RichEditorNET/RichEditorNET.csproj"
     - "dotnet build -c Release ./RichEditorNET/RichEditorNET.csproj"
-    - "dotnet nuget push ./RichEditorNET/RichEditorNET/**/Release/*.nupkg -s \"https://api.nuget.org/v3/index.json\" -k $NUGET_TOKEN --skip-duplicate"
+    - "dotnet nuget push ./RichEditorNET/**/Release/*.nupkg -s \"https://api.nuget.org/v3/index.json\" -k $NUGET_TOKEN --skip-duplicate"
 
 Increment Build Counter:
   stage: post
@@ -52,6 +54,8 @@ Increment Build Counter:
     refs:
       - master
     changes:
+      - .gitlab-ci.yml
       - RichEditorNET/**/*
+
   script:
     - "pwsh -f ./IncrementVersion.ps1"

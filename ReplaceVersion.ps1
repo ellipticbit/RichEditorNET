@@ -9,7 +9,7 @@ $BuildNumber = ([int]$env:BUILD_NUMBER) + 1
 
 $ver = '{0}.{1}.{2}' -f $Major, $Minor, $BuildNumber
 
-Get-ChildItem -Path .\Abstractions\ -Filter *.csproj -Recurse -File | ForEach-Object {
+Get-ChildItem -Path .\RichEditorNET\ -Filter *.csproj -Recurse -File | ForEach-Object {
     [string]$file = Get-Content -Path $_.FullName -Encoding UTF8
 
     $file = $file.Replace("<Version>0.0.0</Version>", "<Version>$($ver)</Version>");
