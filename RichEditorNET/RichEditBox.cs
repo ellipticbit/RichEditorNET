@@ -250,6 +250,21 @@ namespace EllipticBit.RichEditorNET
 		[Description("When true, prevents the popup editing toolbar from being displayed.")]
 		public bool DisableEditingPopup { get; set; }
 
+		[DefaultValue(null)]
+		[Category("Behavior")]
+		[Description("Contains string content from remote sources. When set and different from the currently displayed text, the control background turns orange to indicate external changes.")]
+		public string? RemoteContent {
+			get => _remoteContent;
+			set {
+				_remoteContent = value;
+				UpdateRemoteContentHighlight();
+			}
+		}
+
+		private string? _remoteContent;
+		private Color _savedBackColor;
+		private bool _remoteContentHighlighted;
+
 		/// <summary>
 		/// Occurs when the Insert Hyperlink button is clicked on the popup toolbar.
 		/// </summary>
@@ -358,6 +373,11 @@ namespace EllipticBit.RichEditorNET
 			}
 		}
 
+		protected override void OnTextChanged(EventArgs e) {
+			base.OnTextChanged(e);
+			UpdateRemoteContentHighlight();
+		}
+
 		private void ApplySpellCheckOption() {
 			var options = (int)PInvoke.SendMessage(Handle, PInvoke.EM_GETLANGOPTIONS, IntPtr.Zero, IntPtr.Zero);
 			if (_enableSpellCheck)
@@ -365,6 +385,20 @@ namespace EllipticBit.RichEditorNET
 			else
 				options &= ~PInvoke.IMF_SPELLCHECKING;
 			PInvoke.SendMessage(Handle, PInvoke.EM_SETLANGOPTIONS, IntPtr.Zero, (IntPtr)options);
+		}
+
+		private void UpdateRemoteContentHighlight() {
+			bool shouldHighlight = !string.IsNullOrEmpty(_remoteContent) && _remoteContent != Text;
+
+			if (shouldHighlight && !_remoteContentHighlighted) {
+				_savedBackColor = BackColor;
+				BackColor = Color.Orange;
+				_remoteContentHighlighted = true;
+			}
+			else if (!shouldHighlight && _remoteContentHighlighted) {
+				BackColor = _savedBackColor;
+				_remoteContentHighlighted = false;
+			}
 		}
 
 		protected override void OnMouseUp(MouseEventArgs e) {
