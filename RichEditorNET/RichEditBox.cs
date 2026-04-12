@@ -154,7 +154,7 @@ namespace EllipticBit.RichEditorNET
 		[Category("Behavior")]
 		[Description("Enables or disables font name formatting.")]
 		public bool EnableFontName {
-			get => _enableFontName && !EnableHtmlFontSizing;
+			get => _enableFontName;
 			set => _enableFontName = value;
 		}
 
@@ -290,6 +290,8 @@ namespace EllipticBit.RichEditorNET
 		private PopupToolbar? _activeToolbar;
 		private ToolbarIconCache? _iconCache;
 		private bool _spellCheckMenuShown;
+		private string? _pendingHtml;
+		private string? _pendingMarkdown;
 
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -302,8 +304,18 @@ namespace EllipticBit.RichEditorNET
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public string Markdown {
-			get => MarkdownFormatter.ToMarkdown(TextDocument, EnableGithubMarkdown);
-			set => MarkdownFormatter.FromMarkdown(TextDocument, value, EnableGithubMarkdown);
+			get {
+				if (_textDocument == null) return _pendingMarkdown ?? string.Empty;
+				return MarkdownFormatter.ToMarkdown(TextDocument, EnableGithubMarkdown);
+			}
+			set {
+				if (_textDocument == null) {
+					_pendingMarkdown = value;
+					_pendingHtml = null;
+					return;
+				}
+				MarkdownFormatter.FromMarkdown(TextDocument, value, EnableGithubMarkdown);
+			}
 		}
 
 		/// <summary>
@@ -312,8 +324,18 @@ namespace EllipticBit.RichEditorNET
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public string Html {
-			get => HtmlFormatter.ToHtml(TextDocument, EnableHtmlFontSizing, Font.Name, Font.SizeInPoints);
-			set => HtmlFormatter.FromHtml(TextDocument, value, EnableStrictHtml);
+			get {
+				if (_textDocument == null) return _pendingHtml ?? string.Empty;
+				return HtmlFormatter.ToHtml(TextDocument, EnableHtmlFontSizing, Font.Name, Font.SizeInPoints);
+			}
+			set {
+				if (_textDocument == null) {
+					_pendingHtml = value;
+					_pendingMarkdown = null;
+					return;
+				}
+				HtmlFormatter.FromHtml(TextDocument, value, EnableStrictHtml);
+			}
 		}
 
 		internal void RaiseInsertHyperlinkClicked() => InsertHyperlinkClicked?.Invoke(this, EventArgs.Empty);
@@ -343,6 +365,15 @@ namespace EllipticBit.RichEditorNET
 
 			PInvoke.SendMessage(Handle, PInvoke.EM_SETOPTIONS, (IntPtr)PInvoke.ECOOP_AND, (IntPtr)(~PInvoke.ECO_AUTOWORDSELECTION));
 			ApplySpellCheckOption();
+
+			if (_pendingHtml != null) {
+				HtmlFormatter.FromHtml(TextDocument, _pendingHtml, EnableStrictHtml);
+				_pendingHtml = null;
+			}
+			else if (_pendingMarkdown != null) {
+				MarkdownFormatter.FromMarkdown(TextDocument, _pendingMarkdown, EnableGithubMarkdown);
+				_pendingMarkdown = null;
+			}
 		}
 
 		protected override void OnHandleDestroyed(EventArgs e) {

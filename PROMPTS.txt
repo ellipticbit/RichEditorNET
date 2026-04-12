@@ -49,7 +49,7 @@ Here is an idea, in order to more closely align with HTML and Markdown, let's ad
 
 The last task for this project is to implement HTML reading and writing. Since this is a massive task we will break it apart into multiple steps. For the first step we will implement reading a valid HTML5+CSS fragment (html/body tags are not required but should be discarded if included) and generate the valid TOM2 document to be used by the Html property in the RichEditBox. We will place the Html parsing code in the file named HtmlFormatter.cs. The available HTML formatting operations can be found in RichEditBox. For now, we will not handle images as we will implement special rules for handling those. We will also not implement font-face, font-size, headings/pre-formatted, and text alignments to reduce complexity. Please us MarkdownFormatter as a guide for generating TOM2 documents as it includes some special cases.
 
-Now let's add HTML read support for text alignments and font-face and font-size handling. Please note that we added support for HTML headings and pre-formatted text that will need to be supported in addition to specific fonts/sizes. 
+Now let's add HTML read support for text alignments and font-face and font-size handling. Please note that we added support for HTML headings and pre-formatted text that will need to be supported in addition to specific fonts/sizes.
 
 Finally, let's add support for images. This project has two different methods of utilizing images in the RichEditBox control. The first method is to read the embedded image directly from the HTML fragment as a websafe Base64 encoded image. The second method is a hyperlink to the full image with an embedded thumbnail image stored as websafe Base64 inside the hyperlink. In both cases we we will NOT follow the link to download the image, instead, if the embedded image data is corrupted we will instead display a placeholder image.
 
@@ -65,7 +65,7 @@ We need to handle HTML that describes text formatting options that we currently 
 
 Consider the two files HtmlInput (which we loaded into the Html property) and the HtmlOutput, which is what we received back out from the Html property after setting the test document. Is there any way to make the output less verbose and more closely match the input? For example, there are many empty blocks with the default font specified.
 
-
+When setting the text before handle is created an exception is thrown, however it is completely normal to set the text to some default before the window is finished loading. Can you create a backing field for the Html and Markdown properties that stores the content being loaded if the handle is not yet created and then loads the content when the handle is created, or if the handle is already created skip storage and directly load the content?
 
 
 

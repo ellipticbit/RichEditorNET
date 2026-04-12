@@ -37,8 +37,10 @@ namespace Test
 			richTextBox1.Location = new Point(0, 0);
 			richTextBox1.Name = "richTextBox1";
 			richTextBox1.Size = new Size(1574, 929);
+			richTextBox1.EnableHtmlFontSizing = true;
 			richTextBox1.TabIndex = 0;
 			richTextBox1.Text = "";
+			richTextBox1.Markdown = "*Test*";
 			// 
 			// Form1
 			// 
