@@ -245,6 +245,11 @@ namespace EllipticBit.RichEditorNET
 		[Description("When true, loading HTML throws NotSupportedException for any unsupported HTML tag, attribute, or CSS property. When false, unsupported HTML is silently ignored.")]
 		public bool EnableStrictHtml { get; set; }
 
+		[DefaultValue(false)]
+		[Category("Behavior")]
+		[Description("When true, prevents the popup editing toolbar from being displayed.")]
+		public bool DisableEditingPopup { get; set; }
+
 		/// <summary>
 		/// Occurs when the Insert Hyperlink button is clicked on the popup toolbar.
 		/// </summary>
@@ -424,6 +429,7 @@ namespace EllipticBit.RichEditorNET
 		}
 
 		private void ShowPopupToolbar(Point screenLocation) {
+			if (DisableEditingPopup) return;
 			float currentScale = DeviceDpi / 96f;
 			if (_iconCache == null || _iconCache.DpiScale != currentScale) {
 				_activeToolbar?.Dispose();
