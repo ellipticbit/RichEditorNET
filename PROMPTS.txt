@@ -67,5 +67,4 @@ Consider the two files HtmlInput (which we loaded into the Html property) and th
 
 When setting the text before handle is created an exception is thrown, however it is completely normal to set the text to some default before the window is finished loading. Can you create a backing field for the Html and Markdown properties that stores the content being loaded if the handle is not yet created and then loads the content when the handle is created, or if the handle is already created skip storage and directly load the content?
 
-
-
+It is possible that different instances of the control could be displayed on different screens with different DPIs. Could we maintain a global dictionary with the different DPI scalings serving as keys and the values are different scalings. Scalings can be added as needed to keep resource usage low. For the keys use an integer to avoid float rounding errors.

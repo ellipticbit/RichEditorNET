@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -288,7 +289,8 @@ namespace EllipticBit.RichEditorNET
 
 		private ITextDocument2? _textDocument;
 		private PopupToolbar? _activeToolbar;
-		private ToolbarIconCache? _iconCache;
+		private int _activeToolbarDpi;
+		private static readonly Dictionary<int, ToolbarIconCache> _iconCaches = new();
 		private bool _spellCheckMenuShown;
 		private string? _pendingHtml;
 		private string? _pendingMarkdown;
@@ -380,11 +382,6 @@ namespace EllipticBit.RichEditorNET
 			if (_activeToolbar != null) {
 				_activeToolbar.Dispose();
 				_activeToolbar = null;
-			}
-
-			if (_iconCache != null) {
-				_iconCache.Dispose();
-				_iconCache = null;
 			}
 
 			if (_textDocument != null) {
@@ -495,16 +492,16 @@ namespace EllipticBit.RichEditorNET
 
 		private void ShowPopupToolbar(Point screenLocation) {
 			if (DisableEditingPopup) return;
-			float currentScale = DeviceDpi / 96f;
-			if (_iconCache == null || _iconCache.DpiScale != currentScale) {
-				_activeToolbar?.Dispose();
-				_activeToolbar = null;
-				_iconCache?.Dispose();
-				_iconCache = new ToolbarIconCache(currentScale);
+			int currentDpi = DeviceDpi;
+			if (!_iconCaches.TryGetValue(currentDpi, out var iconCache)) {
+				iconCache = new ToolbarIconCache(currentDpi / 96f);
+				_iconCaches[currentDpi] = iconCache;
 			}
 
-			if (_activeToolbar == null) {
-				_activeToolbar = new PopupToolbar(this, _iconCache);
+			if (_activeToolbar == null || _activeToolbarDpi != currentDpi) {
+				_activeToolbar?.Dispose();
+				_activeToolbar = new PopupToolbar(this, iconCache);
+				_activeToolbarDpi = currentDpi;
 			}
 
 			_activeToolbar.ShowAt(screenLocation);
