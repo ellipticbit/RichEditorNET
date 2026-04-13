@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -238,6 +239,14 @@ namespace EllipticBit.RichEditorNET.Formatting
 						if (storyLength > 1) {
 							clearRange.SetRange(0, storyLength);
 							clearRange.Text = string.Empty;
+						}
+						clearRange.SetRange(0, 0);
+						var resetFont = clearRange.Font;
+						try {
+							resetFont.Reset(tomConstants.tomDefault);
+						}
+						finally {
+							Marshal.ReleaseComObject(resetFont);
 						}
 					}
 					finally {

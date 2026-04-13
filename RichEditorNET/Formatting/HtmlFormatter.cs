@@ -576,6 +576,14 @@ namespace EllipticBit.RichEditorNET.Formatting
 							clearRange.SetRange(0, storyLength);
 							clearRange.Text = string.Empty;
 						}
+						clearRange.SetRange(0, 0);
+						var resetFont = clearRange.Font;
+						try {
+							resetFont.Reset(tomConstants.tomDefault);
+						}
+						finally {
+							Marshal.ReleaseComObject(resetFont);
+						}
 					}
 					finally {
 						Marshal.ReleaseComObject(clearRange);
