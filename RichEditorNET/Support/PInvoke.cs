@@ -8,6 +8,7 @@ namespace EllipticBit.RichEditorNET.Support
 		internal const string MSFTEDIT_DLL = "msftedit.dll";
 		internal const string RICHEDIT_CLASS = "RICHEDIT50W";
 
+		internal const int WM_SETREDRAW = 0x000B;
 		internal const int WM_CONTEXTMENU = 0x007B;
 		internal const int WM_ENTERMENULOOP = 0x0211;
 		internal const int WM_USER = 0x0400;

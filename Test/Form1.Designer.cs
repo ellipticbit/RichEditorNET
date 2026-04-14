@@ -40,7 +40,7 @@ namespace Test
 			richTextBox1.EnableHtmlFontSizing = true;
 			richTextBox1.TabIndex = 0;
 			richTextBox1.Text = "";
-			//richTextBox1.Markdown = "*Test*";
+			richTextBox1.Markdown = "*Test*";
 			// 
 			// Form1
 			// 

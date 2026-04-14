@@ -570,19 +570,13 @@ namespace EllipticBit.RichEditorNET.Formatting
 							Marshal.ReleaseComObject(headingRange);
 						}
 
-						var resetRange = doc.Range2(blockEnd, blockEnd);
+						var rFont = range.Font;
 						try {
-							var rFont = resetRange.Font;
-							try {
-								rFont.Bold = tomConstants.tomFalse;
-								rFont.Size = BlockStyleHelper.ParagraphPointSize;
-							}
-							finally {
-								Marshal.ReleaseComObject(rFont);
-							}
+							rFont.Bold = tomConstants.tomFalse;
+							rFont.Size = BlockStyleHelper.ParagraphPointSize;
 						}
 						finally {
-							Marshal.ReleaseComObject(resetRange);
+							Marshal.ReleaseComObject(rFont);
 						}
 					}
 				}

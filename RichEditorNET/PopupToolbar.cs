@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 using EllipticBit.RichEditorNET.Formatting;
+using EllipticBit.RichEditorNET.Support;
 using EllipticBit.RichEditorNET.TextObjectModel2;
 
 namespace EllipticBit.RichEditorNET
@@ -110,6 +111,26 @@ namespace EllipticBit.RichEditorNET
 			base.OnPaint(e);
 			using (var pen = new Pen(Color.FromArgb(200, 200, 200)))
 				e.Graphics.DrawRectangle(pen, 0, 0, ClientSize.Width - 1, ClientSize.Height - 1);
+		}
+
+		protected override void SetVisibleCore(bool value)
+		{
+			if (!value && Visible && _editor.IsHandleCreated)
+			{
+				_editor.TextDocument.Freeze();
+				try
+				{
+					base.SetVisibleCore(value);
+				}
+				finally
+				{
+					_editor.TextDocument.Unfreeze();
+				}
+			}
+			else
+			{
+				base.SetVisibleCore(value);
+			}
 		}
 
 		protected override void OnDeactivate(EventArgs e)
@@ -319,20 +340,28 @@ namespace EllipticBit.RichEditorNET
 				{
 					try
 					{
-						if (_editor.EnableFontName)
+						_updatingState = true;
+						try
 						{
-							try { _fontCombo.Text = font.Name; }
-							catch { /* ignore COM errors for undefined state */ }
-						}
-
-						if (_editor.EnableFontSize)
-						{
-							try
+							if (_editor.EnableFontName)
 							{
-								float size = font.Size;
-								_sizeCombo.Text = size > 0 ? size.ToString("0.##") : "";
+								try { _fontCombo.Text = font.Name; }
+								catch { /* ignore COM errors for undefined state */ }
 							}
-							catch { /* ignore COM errors for undefined state */ }
+
+							if (_editor.EnableFontSize)
+							{
+								try
+								{
+									float size = font.Size;
+									_sizeCombo.Text = size > 0 ? size.ToString("0.##") : "";
+								}
+								catch { /* ignore COM errors for undefined state */ }
+							}
+						}
+						finally
+						{
+							_updatingState = false;
 						}
 
 						if (_editor.EnableHtmlFontSizing)
@@ -415,6 +444,7 @@ namespace EllipticBit.RichEditorNET
 
 		private void OnFontFamilyChanged(object sender, EventArgs e)
 		{
+			if (_updatingState) return;
 			if (_fontCombo.SelectedItem is string name && !string.IsNullOrEmpty(name))
 			{
 				_editor.SetFontName(name);
@@ -438,6 +468,7 @@ namespace EllipticBit.RichEditorNET
 
 		private void OnFontSizeChanged(object sender, EventArgs e)
 		{
+			if (_updatingState) return;
 			ApplyFontSize();
 		}
 

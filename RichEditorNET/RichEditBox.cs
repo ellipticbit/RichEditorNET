@@ -316,6 +316,7 @@ namespace EllipticBit.RichEditorNET
 					_pendingHtml = null;
 					return;
 				}
+				Clear();
 				MarkdownFormatter.FromMarkdown(TextDocument, value, EnableGithubMarkdown);
 			}
 		}
@@ -336,6 +337,7 @@ namespace EllipticBit.RichEditorNET
 					_pendingMarkdown = null;
 					return;
 				}
+				Clear();
 				HtmlFormatter.FromHtml(TextDocument, value, EnableStrictHtml);
 			}
 		}

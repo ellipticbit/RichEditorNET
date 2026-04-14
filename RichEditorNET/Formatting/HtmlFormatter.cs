@@ -1813,19 +1813,13 @@ namespace EllipticBit.RichEditorNET.Formatting
 							Marshal.ReleaseComObject(headingRange);
 						}
 
-						var resetRange = doc.Range2(blockEnd, blockEnd);
+						var rFont = range.Font;
 						try {
-							var rFont = resetRange.Font;
-							try {
-								rFont.Bold = tomConstants.tomFalse;
-								rFont.Size = BlockStyleHelper.ParagraphPointSize;
-							}
-							finally {
-								Marshal.ReleaseComObject(rFont);
-							}
+							rFont.Bold = tomConstants.tomFalse;
+							rFont.Size = BlockStyleHelper.ParagraphPointSize;
 						}
 						finally {
-							Marshal.ReleaseComObject(resetRange);
+							Marshal.ReleaseComObject(rFont);
 						}
 					}
 					else if (block.Preformatted && blockEnd > blockStart) {
@@ -1844,19 +1838,13 @@ namespace EllipticBit.RichEditorNET.Formatting
 							Marshal.ReleaseComObject(preRange);
 						}
 
-						var resetRange = doc.Range2(blockEnd, blockEnd);
+						var rFont = range.Font;
 						try {
-							var rFont = resetRange.Font;
-							try {
-								rFont.Name = string.Empty;
-								rFont.Size = BlockStyleHelper.ParagraphPointSize;
-							}
-							finally {
-								Marshal.ReleaseComObject(rFont);
-							}
+							rFont.Name = string.Empty;
+							rFont.Size = BlockStyleHelper.ParagraphPointSize;
 						}
 						finally {
-							Marshal.ReleaseComObject(resetRange);
+							Marshal.ReleaseComObject(rFont);
 						}
 					}
 				}
