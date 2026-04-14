@@ -29,6 +29,8 @@ namespace EllipticBit.RichEditorNET
 		private Color _lastFontColor = Color.Black;
 		private Color _lastBackgroundColor = Color.Yellow;
 		private bool _updatingState;
+		private int _savedSelStart;
+		private int _savedSelLen;
 
 		internal PopupToolbar(RichEditBox editor, ToolbarIconCache icons)
 		{
@@ -79,6 +81,8 @@ namespace EllipticBit.RichEditorNET
 		{
 			_showGeneration++;
 			_targetScreenPoint = screenPoint;
+			_savedSelStart = _editor.SelectionStart;
+			_savedSelLen = _editor.SelectionLength;
 
 			if (!_shown)
 			{
@@ -233,8 +237,8 @@ namespace EllipticBit.RichEditorNET
 			};
 			strip.Items.Add(_sizeCombo);
 
-			strip.Items.Add(CreateButton(_icons.FontSizeIncrease, "Increase Font Size", _editor.EnableFontSize, (s, e) => _editor.IncreaseFontSize()));
-			strip.Items.Add(CreateButton(_icons.FontSizeDecrease, "Decrease Font Size", _editor.EnableFontSize, (s, e) => _editor.DecreaseFontSize()));
+			strip.Items.Add(CreateButton(_icons.FontSizeIncrease, "Increase Font Size", _editor.EnableFontSize, (s, e) => WithEditorSelection(() => _editor.IncreaseFontSize())));
+			strip.Items.Add(CreateButton(_icons.FontSizeDecrease, "Decrease Font Size", _editor.EnableFontSize, (s, e) => WithEditorSelection(() => _editor.DecreaseFontSize())));
 
 			bool hasFontGroup = _editor.EnableFontName || _editor.EnableFontSize || _editor.EnableHtmlFontSizing;
 			bool hasInsertGroup = _editor.EnableHyperlinks || _editor.EnableImages;
@@ -248,8 +252,8 @@ namespace EllipticBit.RichEditorNET
 
 			AddSeparator(strip, hasInsertGroup && hasListGroup);
 
-			strip.Items.Add(CreateButton(_icons.BulletList, "Bullet List", _editor.EnableLists, (s, e) => { _editor.ToggleList(ListStyle.Bullet); RefreshState(); }));
-			strip.Items.Add(CreateButton(_icons.OrderedList, "Ordered List", _editor.EnableLists, (s, e) => { _editor.ToggleList(ListStyle.Decimal); RefreshState(); }));
+			strip.Items.Add(CreateButton(_icons.BulletList, "Bullet List", _editor.EnableLists, (s, e) => WithEditorSelection(() => { _editor.ToggleList(ListStyle.Bullet); RefreshState(); })));
+			strip.Items.Add(CreateButton(_icons.OrderedList, "Ordered List", _editor.EnableLists, (s, e) => WithEditorSelection(() => { _editor.ToggleList(ListStyle.Decimal); RefreshState(); })));
 
 			return strip;
 		}
@@ -262,12 +266,12 @@ namespace EllipticBit.RichEditorNET
 		{
 			var strip = CreateStrip();
 
-			strip.Items.Add(CreateToggleButton(_icons.Bold, "Bold", _editor.EnableBold, (s, e) => { _editor.ToggleBold(); RefreshState(); }));
-			strip.Items.Add(CreateToggleButton(_icons.Italic, "Italic", _editor.EnableItalic, (s, e) => { _editor.ToggleItalic(); RefreshState(); }));
+			strip.Items.Add(CreateToggleButton(_icons.Bold, "Bold", _editor.EnableBold, (s, e) => WithEditorSelection(() => { _editor.ToggleBold(); RefreshState(); })));
+			strip.Items.Add(CreateToggleButton(_icons.Italic, "Italic", _editor.EnableItalic, (s, e) => WithEditorSelection(() => { _editor.ToggleItalic(); RefreshState(); })));
 			strip.Items.Add(CreateUnderlineSplitButton());
-			strip.Items.Add(CreateToggleButton(_icons.Strikethrough, "Strikethrough", _editor.EnableStrikeThrough, (s, e) => { _editor.ToggleStrikeThrough(); RefreshState(); }));
-			strip.Items.Add(CreateToggleButton(_icons.Subscript, "Subscript", _editor.EnableSubscript, (s, e) => { _editor.ToggleSubscript(); RefreshState(); }));
-			strip.Items.Add(CreateToggleButton(_icons.Superscript, "Superscript", _editor.EnableSuperscript, (s, e) => { _editor.ToggleSuperscript(); RefreshState(); }));
+			strip.Items.Add(CreateToggleButton(_icons.Strikethrough, "Strikethrough", _editor.EnableStrikeThrough, (s, e) => WithEditorSelection(() => { _editor.ToggleStrikeThrough(); RefreshState(); })));
+			strip.Items.Add(CreateToggleButton(_icons.Subscript, "Subscript", _editor.EnableSubscript, (s, e) => WithEditorSelection(() => { _editor.ToggleSubscript(); RefreshState(); })));
+			strip.Items.Add(CreateToggleButton(_icons.Superscript, "Superscript", _editor.EnableSuperscript, (s, e) => WithEditorSelection(() => { _editor.ToggleSuperscript(); RefreshState(); })));
 
 			bool hasTextGroup = _editor.EnableBold || _editor.EnableItalic || _editor.EnableUnderline || _editor.EnableStrikeThrough || _editor.EnableSubscript || _editor.EnableSuperscript;
 			bool hasColorGroup = _editor.EnableBackgroundColor || _editor.EnableFontColor;
@@ -275,18 +279,18 @@ namespace EllipticBit.RichEditorNET
 			AddSeparator(strip, hasTextGroup && (hasColorGroup || hasAlignGroup));
 
 			strip.Items.Add(CreateColorSplitButton(_icons.BackgroundColor, "Background Color", _editor.EnableBackgroundColor,
-				color => { _lastBackgroundColor = color; _editor.SetBackgroundColor(color); },
+				color => WithEditorSelection(() => { _lastBackgroundColor = color; _editor.SetBackgroundColor(color); }),
 				() => _lastBackgroundColor));
 			strip.Items.Add(CreateColorSplitButton(_icons.FontColor, "Font Color", _editor.EnableFontColor,
-				color => { _lastFontColor = color; _editor.SetFontColor(color); },
+				color => WithEditorSelection(() => { _lastFontColor = color; _editor.SetFontColor(color); }),
 				() => _lastFontColor));
 
 			AddSeparator(strip, hasColorGroup && hasAlignGroup);
 
-			strip.Items.Add(CreateToggleButton(_icons.AlignLeft, "Align Left", _editor.EnableAlignment, (s, e) => { _editor.SetAlignment(ParagraphAlignment.Left); RefreshState(); }));
-			strip.Items.Add(CreateToggleButton(_icons.AlignCenter, "Align Center", _editor.EnableAlignment, (s, e) => { _editor.SetAlignment(ParagraphAlignment.Center); RefreshState(); }));
-			strip.Items.Add(CreateToggleButton(_icons.AlignRight, "Align Right", _editor.EnableAlignment, (s, e) => { _editor.SetAlignment(ParagraphAlignment.Right); RefreshState(); }));
-			strip.Items.Add(CreateToggleButton(_icons.AlignJustify, "Align Justify", _editor.EnableAlignment, (s, e) => { _editor.SetAlignment(ParagraphAlignment.Justify); RefreshState(); }));
+			strip.Items.Add(CreateToggleButton(_icons.AlignLeft, "Align Left", _editor.EnableAlignment, (s, e) => WithEditorSelection(() => { _editor.SetAlignment(ParagraphAlignment.Left); RefreshState(); })));
+			strip.Items.Add(CreateToggleButton(_icons.AlignCenter, "Align Center", _editor.EnableAlignment, (s, e) => WithEditorSelection(() => { _editor.SetAlignment(ParagraphAlignment.Center); RefreshState(); })));
+			strip.Items.Add(CreateToggleButton(_icons.AlignRight, "Align Right", _editor.EnableAlignment, (s, e) => WithEditorSelection(() => { _editor.SetAlignment(ParagraphAlignment.Right); RefreshState(); })));
+			strip.Items.Add(CreateToggleButton(_icons.AlignJustify, "Align Justify", _editor.EnableAlignment, (s, e) => WithEditorSelection(() => { _editor.SetAlignment(ParagraphAlignment.Justify); RefreshState(); })));
 
 			return strip;
 		}
@@ -301,11 +305,11 @@ namespace EllipticBit.RichEditorNET
 				Visible = _editor.EnableUnderline,
 			};
 
-			button.ButtonClick += (s, e) =>
+			button.ButtonClick += (s, e) => WithEditorSelection(() =>
 			{
 				_editor.ToggleUnderline(UnderlineStyle.Single);
 				RefreshState();
-			};
+			});
 
 			button.DropDownItems.Add(CreateUnderlineDropDownItem("Single", _icons.UnderlineSingle, UnderlineStyle.Single));
 			button.DropDownItems.Add(CreateUnderlineDropDownItem("Double", _icons.UnderlineDouble, UnderlineStyle.Double));
@@ -318,11 +322,11 @@ namespace EllipticBit.RichEditorNET
 
 		private ToolStripMenuItem CreateUnderlineDropDownItem(string text, Bitmap icon, UnderlineStyle style)
 		{
-			var item = new ToolStripMenuItem(text, icon, (s, e) =>
+			var item = new ToolStripMenuItem(text, icon, (s, e) => WithEditorSelection(() =>
 			{
 				_editor.ToggleUnderline(style);
 				RefreshState();
-			});
+			}));
 			return item;
 		}
 
@@ -330,9 +334,17 @@ namespace EllipticBit.RichEditorNET
 
 		#region - State Refresh -
 
+		private void WithEditorSelection(Action action)
+		{
+			_editor.Select(_savedSelStart, _savedSelLen);
+			action();
+			_savedSelStart = _editor.SelectionStart;
+			_savedSelLen = _editor.SelectionLength;
+		}
+
 		private void RefreshState()
 		{
-			var range = _editor.TextDocument.Range2(_editor.SelectionStart, _editor.SelectionStart + _editor.SelectionLength);
+			var range = _editor.TextDocument.Range2(_savedSelStart, _savedSelStart + _savedSelLen);
 			try
 			{
 				var font = range.Font;
@@ -447,8 +459,7 @@ namespace EllipticBit.RichEditorNET
 			if (_updatingState) return;
 			if (_fontCombo.SelectedItem is string name && !string.IsNullOrEmpty(name))
 			{
-				_editor.SetFontName(name);
-				_editor.Focus();
+				WithEditorSelection(() => _editor.SetFontName(name));
 			}
 		}
 
@@ -459,8 +470,7 @@ namespace EllipticBit.RichEditorNET
 				string name = _fontCombo.Text;
 				if (!string.IsNullOrEmpty(name))
 				{
-					_editor.SetFontName(name);
-					_editor.Focus();
+					WithEditorSelection(() => _editor.SetFontName(name));
 				}
 				e.Handled = true;
 			}
@@ -485,8 +495,7 @@ namespace EllipticBit.RichEditorNET
 		{
 			if (float.TryParse(_sizeCombo.Text, out float size) && size > 0)
 			{
-				_editor.SetFontSize(size);
-				_editor.Focus();
+				WithEditorSelection(() => _editor.SetFontSize(size));
 			}
 		}
 
@@ -495,9 +504,11 @@ namespace EllipticBit.RichEditorNET
 			if (_updatingState) return;
 			if (_blockStyleCombo.SelectedIndex >= 0)
 			{
-				_editor.SetBlockStyle((BlockStyle)_blockStyleCombo.SelectedIndex);
-				RefreshState();
-				_editor.Focus();
+				WithEditorSelection(() =>
+				{
+					_editor.SetBlockStyle((BlockStyle)_blockStyleCombo.SelectedIndex);
+					RefreshState();
+				});
 			}
 		}
 

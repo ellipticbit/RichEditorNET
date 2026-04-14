@@ -51,7 +51,7 @@ namespace Test
 			Name = "Form1";
 			StartPosition = FormStartPosition.CenterScreen;
 			Text = "Form1";
-			Activated += Form1_Activated;
+			Load += Form1_Load;
 			ResumeLayout(false);
 		}
 

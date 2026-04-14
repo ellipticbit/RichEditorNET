@@ -6,7 +6,7 @@ namespace Test
 			InitializeComponent();
 		}
 
-		private void Form1_Activated(object sender, EventArgs e) {
+		private void Form1_Load(object sender, EventArgs e) {
 
 			var markdown =
 				"This is a **bold** word and an *italic* word.\n" +
