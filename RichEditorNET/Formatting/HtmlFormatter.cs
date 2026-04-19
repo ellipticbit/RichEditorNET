@@ -15,8 +15,9 @@ namespace EllipticBit.RichEditorNET.Formatting
 {
 	internal static class HtmlFormatter
 	{
-		internal static string ToHtml(ITextDocument2 doc, bool htmlFontSizing, string defaultFontName = "", float defaultFontSize = 0f) {
+		internal static string ToHtml(ITextDocument2 doc, bool htmlFontSizing, bool completeDocument = false, string defaultFontName = "", float defaultFontSize = 0f) {
 			var sb = new StringBuilder(4096);
+			if (completeDocument) sb.Append("<html><body>");
 			var probe = doc.Range2(0, 0);
 			int storyLength;
 			try {
@@ -154,6 +155,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 			}
 
 			CloseAllLists(sb, listTypeStack, liOpenStack);
+			if (completeDocument) sb.Append("</body></html>");
 			return sb.ToString();
 		}
 

@@ -248,6 +248,11 @@ namespace EllipticBit.RichEditorNET
 
 		[DefaultValue(false)]
 		[Category("Behavior")]
+		[Description("When true, the Html property getter returns a complete HTML document with html and body tags. When false, returns only the document fragment.")]
+		public bool ExportCompleteHtmlDocument { get; set; }
+
+		[DefaultValue(false)]
+		[Category("Behavior")]
 		[Description("When true, prevents the popup editing toolbar from being displayed.")]
 		public bool DisableEditingPopup { get; set; }
 
@@ -329,7 +334,7 @@ namespace EllipticBit.RichEditorNET
 		public string Html {
 			get {
 				if (_textDocument == null) return _pendingHtml ?? string.Empty;
-				return HtmlFormatter.ToHtml(TextDocument, EnableHtmlFontSizing, Font.Name, Font.SizeInPoints);
+				return HtmlFormatter.ToHtml(TextDocument, EnableHtmlFontSizing, ExportCompleteHtmlDocument, Font.Name, Font.SizeInPoints);
 			}
 			set {
 				if (_textDocument == null) {
