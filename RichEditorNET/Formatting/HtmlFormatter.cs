@@ -176,21 +176,6 @@ namespace EllipticBit.RichEditorNET.Formatting
 					if (moved == 0) break;
 					if (runRange.End > end) runRange.End = end;
 
-					int ch = runRange.Char;
-						if (ch == 0xFFFC) {
-							if (tagsOpen) {
-								CloseHtmlInlineTags(sb, curBold, curItalic, curStrike, curUnderline, curSup, curSub, curFore, curBack, curUrl, curFontName, curFontSize);
-								tagsOpen = false;
-								curBold = false; curItalic = false; curStrike = false; curSup = false; curSub = false;
-								curUnderline = 0; curFore = tomConstants.tomAutoColor; curBack = tomConstants.tomAutoColor;
-								curUrl = string.Empty;
-								curFontName = string.Empty; curFontSize = 0f;
-							}
-							EmitImageTag(doc, sb, runRange.Start);
-							runRange.SetRange(runRange.Start + 1, runRange.Start + 1);
-							continue;
-						}
-
 					var font = runRange.Font;
 					bool newBold, newItalic, newStrike, newSup, newSub;
 					int newUnderline, newFore, newBack;
@@ -230,23 +215,25 @@ namespace EllipticBit.RichEditorNET.Formatting
 
 					string newUrl = GetEmitCleanUrl(runRange.URL);
 
-					bool changed = newBold != curBold || newItalic != curItalic || newStrike != curStrike ||
+					string text = runRange.Text ?? string.Empty;
+					int runDocStart = runRange.Start;
+					int docOffset = 0;
+					if (text.StartsWith("HYPERLINK \"", StringComparison.Ordinal)) {
+						int endQuote = text.IndexOf('"', 11);
+						if (endQuote >= 0) {
+							docOffset = endQuote + 1;
+							text = text.Substring(docOffset);
+						}
+					}
+
+					bool formatChanged = newBold != curBold || newItalic != curItalic || newStrike != curStrike ||
 						newUnderline != curUnderline || newSup != curSup || newSub != curSub ||
 						newFore != curFore || newBack != curBack || newUrl != curUrl ||
 						newFontName != curFontName || Math.Abs(newFontSize - curFontSize) > 0.01f;
 
-					if (changed && tagsOpen) {
+					if (formatChanged && tagsOpen) {
 						CloseHtmlInlineTags(sb, curBold, curItalic, curStrike, curUnderline, curSup, curSub, curFore, curBack, curUrl, curFontName, curFontSize);
 						tagsOpen = false;
-					}
-
-					bool hasFormatting = newBold || newItalic || newStrike || newUnderline != 0 ||
-						newSup || newSub || newFore != tomConstants.tomAutoColor || newBack != tomConstants.tomAutoColor ||
-						newUrl.Length > 0 || NeedsStyleSpan(newFore, newBack, newUnderline, newFontName, newFontSize);
-
-					if (hasFormatting && !tagsOpen) {
-						OpenHtmlInlineTags(sb, newBold, newItalic, newStrike, newUnderline, newSup, newSub, newFore, newBack, newUrl, newFontName, newFontSize);
-						tagsOpen = true;
 					}
 
 					curBold = newBold; curItalic = newItalic; curStrike = newStrike;
@@ -254,12 +241,32 @@ namespace EllipticBit.RichEditorNET.Formatting
 					curFore = newFore; curBack = newBack; curUrl = newUrl;
 					curFontName = newFontName; curFontSize = newFontSize;
 
-					string text = runRange.Text;
-					if (text != null) {
-						if (curUrl.Length > 0)
-							text = StripEmitHyperlinkFieldCode(text);
-						if (text.Length > 0)
-							sb.Append(WebUtility.HtmlEncode(text));
+					bool hasFormatting = curBold || curItalic || curStrike || curUnderline != 0 ||
+						curSup || curSub || curFore != tomConstants.tomAutoColor || curBack != tomConstants.tomAutoColor ||
+						curUrl.Length > 0 || NeedsStyleSpan(curFore, curBack, curUnderline, curFontName, curFontSize);
+
+					int segStart = 0;
+					for (int idx = 0; idx <= text.Length; idx++) {
+						bool atImage = idx < text.Length && text[idx] == '\uFFFC';
+						bool atEndOfText = idx == text.Length;
+						if (!atImage && !atEndOfText) continue;
+
+						if (idx > segStart) {
+							if (hasFormatting && !tagsOpen) {
+								OpenHtmlInlineTags(sb, curBold, curItalic, curStrike, curUnderline, curSup, curSub, curFore, curBack, curUrl, curFontName, curFontSize);
+								tagsOpen = true;
+							}
+							sb.Append(WebUtility.HtmlEncode(text.Substring(segStart, idx - segStart)));
+						}
+
+						if (atImage) {
+							if (tagsOpen) {
+								CloseHtmlInlineTags(sb, curBold, curItalic, curStrike, curUnderline, curSup, curSub, curFore, curBack, curUrl, curFontName, curFontSize);
+								tagsOpen = false;
+							}
+							EmitImageTag(doc, sb, runDocStart + docOffset + idx);
+							segStart = idx + 1;
+						}
 					}
 
 					runRange.Collapse(tomConstants.tomCollapseEnd);
