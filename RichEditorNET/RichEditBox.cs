@@ -1108,19 +1108,21 @@ namespace EllipticBit.RichEditorNET
 			if (imageStream == null) throw new ArgumentNullException(nameof(imageStream));
 
 			byte[] thumbnailData;
+			int thumbWidth;
+			int thumbHeight;
 			using (var ms = new MemoryStream()) {
 				imageStream.CopyTo(ms);
 				ms.Position = 0;
 				using (var image = Image.FromStream(ms)) {
-					var format = GetImageFormat(image);
-					thumbnailData = CreateThumbnail(image, DefaultImageWidth, DefaultImageHeight, format);
+					GetImageFormat(image); // validate the source format is supported
+					thumbnailData = CreateThumbnail(image, DefaultImageWidth, DefaultImageHeight, out thumbWidth, out thumbHeight);
 				}
 			}
 
 			if (_richEditOle == null) throw new InvalidOperationException("The control handle has not been created.");
 			int cpStart = SelectionStart;
 			int hr = ImageOleObject.Insert(_richEditOle, ReoConstants.REO_CP_SELECTION, thumbnailData, altText ?? string.Empty,
-				PixelsToHimetric(DefaultImageWidth), PixelsToHimetric(DefaultImageHeight));
+				PixelsToHimetric(thumbWidth), PixelsToHimetric(thumbHeight));
 			if (hr < 0) Marshal.ThrowExceptionForHR(hr);
 
 			var linkRange = TextDocument.Range2(cpStart, cpStart + 1);
@@ -1151,17 +1153,34 @@ namespace EllipticBit.RichEditorNET
 			throw new ArgumentException("Unsupported image format. Only JPEG, PNG, and GIF images are supported.");
 		}
 
-		private static byte[] CreateThumbnail(Image original, int width, int height, ImageFormat format) {
-			using (var thumbnail = new Bitmap(width, height))
+		private static byte[] CreateThumbnail(Image original, int maxWidth, int maxHeight, out int outWidth, out int outHeight) {
+			// Preserve aspect ratio; never upscale. If the image already fits within the max
+			// box, keep its native dimensions.
+			int srcW = original.Width;
+			int srcH = original.Height;
+			if (srcW <= maxWidth && srcH <= maxHeight) {
+				outWidth = srcW;
+				outHeight = srcH;
+			}
+			else {
+				double scale = Math.Min((double)maxWidth / srcW, (double)maxHeight / srcH);
+				outWidth = Math.Max(1, (int)Math.Round(srcW * scale));
+				outHeight = Math.Max(1, (int)Math.Round(srcH * scale));
+			}
+
+			// Always emit PNG regardless of source format. The RichEdit static picture cache
+			// reliably renders our GDI+-decoded PNGs; other formats (notably JPEG) can come
+			// back blank depending on the installed codec path.
+			using (var thumbnail = new Bitmap(outWidth, outHeight, PixelFormat.Format32bppArgb))
 			using (var graphics = Graphics.FromImage(thumbnail)) {
 				graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
 				graphics.CompositingQuality = CompositingQuality.HighQuality;
 				graphics.SmoothingMode = SmoothingMode.HighQuality;
 				graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
-				graphics.DrawImage(original, 0, 0, width, height);
+				graphics.DrawImage(original, 0, 0, outWidth, outHeight);
 
 				using (var ms = new MemoryStream()) {
-					thumbnail.Save(ms, format);
+					thumbnail.Save(ms, ImageFormat.Png);
 					return ms.ToArray();
 				}
 			}

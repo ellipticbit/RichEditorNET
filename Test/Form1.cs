@@ -164,6 +164,9 @@ namespace Test
 				// Embedded image (colorful 4x4 checkerboard PNG, displayed at 64x64)
 				"<p>Embedded image: <img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAoSURBVBhXVckxDQAACMCwaUITIpCIqxE+OJtCqY1GSKc8lHKxycXmACitJyWNw1liAAAAAElFTkSuQmCC\" alt=\"Colorful PNG\" width=\"64\" height=\"64\" /></p>" +
 
+				// Embedded JPEG (4x4 checkerboard, displayed at 64x64)
+				"<p>Embedded JPEG: <img src=\"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCAAEAAQDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDyn9ov9ovxD+zR4xtvDnhy2+1Wc/8AaO5/7b1jSv8Ajz1i/wBKi/daXe2kJzDpsLcxnZu8qLyraK2t4CiigD//2Q==\" alt=\"Checkerboard JPEG\" width=\"64\" height=\"64\" /></p>" +
+
 				// Linked thumbnail (colorful 4x4 pattern, displayed at 64x64, wrapped in hyperlink)
 				"<p>Linked thumbnail: <a href=\"https://example.com/fullsize.png\"><img src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAApSURBVBhXYzjBcOI/w507///3MPxP+Z/ynwGZA5ZE4dy5858BmQOSBACWFypZKMSEbwAAAABJRU5ErkJggg==\" alt=\"Linked thumb\" width=\"64\" height=\"64\" /></a></p>" +
 

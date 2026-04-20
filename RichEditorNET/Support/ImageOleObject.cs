@@ -314,8 +314,14 @@ namespace EllipticBit.RichEditorNET.Support
 			if (_renderImage != null || _bytes == null || _bytes.Length == 0) return;
 			try
 			{
+				// GDI+ requires the source stream to remain open for the lifetime of the Image
+				// for formats that lazy-decode (notably JPEG). Decoding into a Bitmap copy here
+				// detaches the image from the MemoryStream so we can safely dispose it.
 				using (var ms = new MemoryStream(_bytes, writable: false))
-					_renderImage = Image.FromStream(ms, useEmbeddedColorManagement: false, validateImageData: false);
+				using (var decoded = Image.FromStream(ms, useEmbeddedColorManagement: false, validateImageData: false))
+				{
+					_renderImage = new Bitmap(decoded);
+				}
 			}
 			catch
 			{
