@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -15,7 +15,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 {
 	internal static class HtmlFormatter
 	{
-		internal static string ToHtml(ITextDocument2 doc, bool htmlFontSizing, bool completeDocument = false, string defaultFontName = "", float defaultFontSize = 0f) {
+		internal static string ToHtml(ITextDocument2 doc, IntPtr hwnd, bool htmlFontSizing, bool completeDocument = false, string defaultFontName = "", float defaultFontSize = 0f) {
 			var sb = new StringBuilder(4096);
 			if (completeDocument) sb.Append("<html><body>");
 			var probe = doc.Range2(0, 0);
@@ -27,6 +27,18 @@ namespace EllipticBit.RichEditorNET.Formatting
 				Marshal.ReleaseComObject(probe);
 			}
 
+			IRichEditOle richOle = null;
+			if (hwnd != IntPtr.Zero) {
+				IntPtr pOle = IntPtr.Zero;
+				PInvoke.SendMessage(hwnd, PInvoke.EM_GETOLEINTERFACE, IntPtr.Zero, ref pOle);
+				if (pOle != IntPtr.Zero) {
+					try { richOle = Marshal.GetObjectForIUnknown(pOle) as IRichEditOle; }
+					catch { richOle = null; }
+					Marshal.Release(pOle);
+				}
+			}
+
+			try {
 			int pos = 0;
 			var listTypeStack = new List<int>();
 			var liOpenStack = new List<bool>();
@@ -119,7 +131,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 						liOpenStack[liOpenStack.Count - 1] = true;
 
 						if (textEnd > paraStart)
-							EmitHtmlInlineContent(doc, sb, paraStart, textEnd, !htmlFontSizing, false, defaultFontName, defaultFontSize);
+							EmitHtmlInlineContent(doc, richOle, sb, paraStart, textEnd, !htmlFontSizing, false, defaultFontName, defaultFontSize);
 					}
 					else {
 						CloseAllLists(sb, listTypeStack, liOpenStack);
@@ -142,7 +154,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 							baseSize = BlockStyleHelper.PreformattedPointSize;
 						}
 						if (textEnd > paraStart)
-							EmitHtmlInlineContent(doc, sb, paraStart, textEnd, !htmlFontSizing, headingLevel > 0, baseFont, baseSize);
+							EmitHtmlInlineContent(doc, richOle, sb, paraStart, textEnd, !htmlFontSizing, headingLevel > 0, baseFont, baseSize);
 						sb.Append("</").Append(tag).Append('>');
 					}
 
@@ -157,11 +169,15 @@ namespace EllipticBit.RichEditorNET.Formatting
 			CloseAllLists(sb, listTypeStack, liOpenStack);
 			if (completeDocument) sb.Append("</body></html>");
 			return sb.ToString();
+			}
+			finally {
+				if (richOle != null) Marshal.ReleaseComObject(richOle);
+			}
 		}
 
 		#region - HTML Emission -
 
-		private static void EmitHtmlInlineContent(ITextDocument2 doc, StringBuilder sb, int start, int end, bool emitFontStyles, bool suppressBold, string defaultFontName = "", float defaultFontSize = 0f) {
+		private static void EmitHtmlInlineContent(ITextDocument2 doc, IRichEditOle richOle, StringBuilder sb, int start, int end, bool emitFontStyles, bool suppressBold, string defaultFontName, float defaultFontSize) {
 			bool curBold = false, curItalic = false, curStrike = false, curSup = false, curSub = false;
 			int curUnderline = 0, curFore = tomConstants.tomAutoColor, curBack = tomConstants.tomAutoColor;
 			string curUrl = string.Empty;
@@ -264,7 +280,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 								CloseHtmlInlineTags(sb, curBold, curItalic, curStrike, curUnderline, curSup, curSub, curFore, curBack, curUrl, curFontName, curFontSize);
 								tagsOpen = false;
 							}
-							EmitImageTag(doc, sb, runDocStart + docOffset + idx);
+							EmitImageTag(doc, richOle, sb, runDocStart + docOffset + idx);
 							segStart = idx + 1;
 						}
 					}
@@ -401,152 +417,68 @@ namespace EllipticBit.RichEditorNET.Formatting
 			return text.Substring(endQuote + 1);
 		}
 
-		private static void EmitImageTag(ITextDocument2 doc, StringBuilder sb, int imgPos) {
+		private static void EmitImageTag(ITextDocument2 doc, IRichEditOle richOle, StringBuilder sb, int imgPos) {
 			var imgRange = doc.Range2(imgPos, imgPos + 1);
+			string url;
 			try {
-				string url = GetEmitCleanUrl(imgRange.URL);
-				string altText = string.Empty;
-				try { altText = imgRange.GetText2(tomConstants.tomTextize) ?? string.Empty; }
-				catch { }
-
-				byte[] imageData = null;
-				int widthPx = 0, heightPx = 0;
-
-				object embeddedObj = null;
-				try {
-					embeddedObj = imgRange.GetEmbeddedObject();
-					if (embeddedObj != null)
-						imageData = ExtractImageData(embeddedObj, out widthPx, out heightPx);
-				}
-				catch { }
-				finally {
-					if (embeddedObj != null) {
-						try { Marshal.ReleaseComObject(embeddedObj); } catch { }
-					}
-				}
-
-				if (imageData == null || imageData.Length == 0) return;
-
-				string mimeType = GetEmitImageMimeType(imageData);
-				string base64 = ToWebSafeBase64(imageData);
-
-				if (url.Length > 0)
-					sb.Append("<a href=\"").Append(WebUtility.HtmlEncode(url)).Append("\">");
-
-				sb.Append("<img src=\"data:").Append(mimeType).Append(";base64,").Append(base64).Append('"');
-				if (altText.Length > 0)
-					sb.Append(" alt=\"").Append(WebUtility.HtmlEncode(altText)).Append('"');
-				if (widthPx > 0)
-					sb.Append(" width=\"").Append(widthPx).Append('"');
-				if (heightPx > 0)
-					sb.Append(" height=\"").Append(heightPx).Append('"');
-				sb.Append(" />");
-
-				if (url.Length > 0)
-					sb.Append("</a>");
+				url = GetEmitCleanUrl(imgRange.URL);
 			}
 			finally {
 				Marshal.ReleaseComObject(imgRange);
 			}
-		}
 
-		private static byte[] ExtractImageData(object embeddedObj, out int widthPx, out int heightPx) {
-			widthPx = 0;
-			heightPx = 0;
+			byte[] imageData = null;
+			string altText = string.Empty;
+			int widthHimetric = 0, heightHimetric = 0;
 
-			if (embeddedObj is IPicture picture) {
-				byte[] data = TryExtractViaPicture(picture, out widthPx, out heightPx);
-				if (data != null && data.Length > 0) return data;
-			}
-
-			if (embeddedObj is System.Runtime.InteropServices.ComTypes.IDataObject dataObj) {
-				byte[] data = TryExtractViaEnhMetafile(dataObj, out widthPx, out heightPx);
-				if (data != null && data.Length > 0) return data;
-			}
-
-			return null;
-		}
-
-		private static byte[] TryExtractViaPicture(IPicture picture, out int widthPx, out int heightPx) {
-			widthPx = 0;
-			heightPx = 0;
-			try {
-				widthPx = HimetricToPixels(picture.get_Width());
-				heightPx = HimetricToPixels(picture.get_Height());
-				if (widthPx <= 0 || heightPx <= 0) return null;
-
-				int hr = PInvoke.CreateStreamOnHGlobal(IntPtr.Zero, true, out var stream);
-				if (hr != 0) return null;
-				try {
-					picture.SaveAsFile(stream, true, out int cbSize);
-					if (cbSize <= 0) return null;
-
-					stream.Seek(0, 0, IntPtr.Zero);
-					byte[] data = new byte[cbSize];
-					stream.Read(data, cbSize, IntPtr.Zero);
-
-					if (data.Length >= 2 && data[0] == 0x42 && data[1] == 0x4D) {
-						try {
-							using (var ms = new MemoryStream(data))
-							using (var image = Image.FromStream(ms))
-							using (var outMs = new MemoryStream()) {
-								image.Save(outMs, ImageFormat.Png);
-								return outMs.ToArray();
-							}
-						}
-						catch { return data; }
-					}
-
-					return data;
-				}
-				finally {
-					Marshal.ReleaseComObject(stream);
+			if (richOle != null) {
+				if (ImageOleObject.TryRead(richOle, imgPos, out var bytes, out var alt, out widthHimetric, out heightHimetric)) {
+					imageData = bytes;
+					altText = alt ?? string.Empty;
 				}
 			}
-			catch { return null; }
+
+			if (imageData == null || imageData.Length == 0) return;
+
+			int widthPx = HimetricToPixels(widthHimetric);
+			int heightPx = HimetricToPixels(heightHimetric);
+			byte[] emit = ConvertImageBytesToPng(imageData, ref widthPx, ref heightPx) ?? imageData;
+
+			string mimeType = GetEmitImageMimeType(emit);
+			string base64 = ToWebSafeBase64(emit);
+
+			if (url.Length > 0)
+				sb.Append("<a href=\"").Append(WebUtility.HtmlEncode(url)).Append("\">");
+
+			sb.Append("<img src=\"data:").Append(mimeType).Append(";base64,").Append(base64).Append('"');
+			if (altText.Length > 0)
+				sb.Append(" alt=\"").Append(WebUtility.HtmlEncode(altText)).Append('"');
+			if (widthPx > 0)
+				sb.Append(" width=\"").Append(widthPx).Append('"');
+			if (heightPx > 0)
+				sb.Append(" height=\"").Append(heightPx).Append('"');
+			sb.Append(" />");
+
+			if (url.Length > 0)
+				sb.Append("</a>");
 		}
 
-		private const short CF_ENHMETAFILE = 14;
-
-		private static byte[] TryExtractViaEnhMetafile(System.Runtime.InteropServices.ComTypes.IDataObject dataObj, out int widthPx, out int heightPx) {
-			widthPx = 0;
-			heightPx = 0;
-
-			var fmtetc = new System.Runtime.InteropServices.ComTypes.FORMATETC {
-				cfFormat = CF_ENHMETAFILE,
-				dwAspect = System.Runtime.InteropServices.ComTypes.DVASPECT.DVASPECT_CONTENT,
-				lindex = -1,
-				ptd = IntPtr.Zero,
-				tymed = System.Runtime.InteropServices.ComTypes.TYMED.TYMED_ENHMF
-			};
-
-			System.Runtime.InteropServices.ComTypes.STGMEDIUM stgm;
-			try { dataObj.GetData(ref fmtetc, out stgm); }
-			catch { return null; }
-
+		private static byte[] ConvertImageBytesToPng(byte[] data, ref int widthPx, ref int heightPx) {
 			try {
-				if (stgm.unionmember == IntPtr.Zero) return null;
-
-				using (var metafile = new Metafile(stgm.unionmember, false)) {
-					widthPx = metafile.Width;
-					heightPx = metafile.Height;
-					if (widthPx <= 0 || heightPx <= 0) return null;
-
-					using (var bmp = new Bitmap(widthPx, heightPx))
-					using (var g = Graphics.FromImage(bmp)) {
-						g.Clear(Color.Transparent);
-						g.DrawImage(metafile, 0, 0, widthPx, heightPx);
-						using (var ms = new MemoryStream()) {
-							bmp.Save(ms, ImageFormat.Png);
-							return ms.ToArray();
-						}
+				using (var ms = new MemoryStream(data))
+				using (var image = Image.FromStream(ms)) {
+					if (widthPx <= 0) widthPx = image.Width;
+					if (heightPx <= 0) heightPx = image.Height;
+					var guid = image.RawFormat.Guid;
+					if (guid == ImageFormat.Png.Guid || guid == ImageFormat.Jpeg.Guid || guid == ImageFormat.Gif.Guid)
+						return data;
+					using (var outMs = new MemoryStream()) {
+						image.Save(outMs, ImageFormat.Png);
+						return outMs.ToArray();
 					}
 				}
 			}
 			catch { return null; }
-			finally {
-				PInvoke.ReleaseStgMedium(ref stgm);
-			}
 		}
 
 		private static int HimetricToPixels(int himetric) {
@@ -571,7 +503,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 
 		#endregion
 
-		internal static void FromHtml(ITextDocument2 doc, string html, bool strict = false) {
+		internal static void FromHtml(ITextDocument2 doc, IRichEditOle richOle, string html, bool strict = false) {
 			if (html == null) throw new ArgumentNullException(nameof(html));
 
 			doc.Freeze();
@@ -600,7 +532,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 
 					var tokens = Tokenize(html);
 					var blocks = BuildBlocks(tokens, strict);
-					InsertBlocks(doc, blocks);
+					InsertBlocks(doc, richOle, blocks);
 				}
 				finally {
 					doc.EndEditCollection();
@@ -1752,19 +1684,11 @@ namespace EllipticBit.RichEditorNET.Formatting
 			return (int)(pixels * 2540L / 96);
 		}
 
-		private static System.Runtime.InteropServices.ComTypes.IStream CreateComStream(byte[] data) {
-			int hr = PInvoke.CreateStreamOnHGlobal(IntPtr.Zero, true, out var stream);
-			if (hr != 0) Marshal.ThrowExceptionForHR(hr);
-			stream.Write(data, data.Length, IntPtr.Zero);
-			stream.Seek(0, 0, IntPtr.Zero);
-			return stream;
-		}
-
 		#endregion
 
 		#region - TOM2 Insertion -
 
-		private static void InsertBlocks(ITextDocument2 doc, List<ParagraphBlock> blocks) {
+		private static void InsertBlocks(ITextDocument2 doc, IRichEditOle richOle, List<ParagraphBlock> blocks) {
 			if (blocks.Count == 0) return;
 
 			var range = doc.Range2(0, 0);
@@ -1803,7 +1727,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 					}
 
 					int blockStart = range.Start;
-					InsertSpans(doc, range, block.Spans);
+					InsertSpans(doc, richOle, range, block.Spans);
 					int blockEnd = range.Start;
 
 					if (block.HeadingLevel > 0 && blockEnd > blockStart) {
@@ -1887,30 +1811,29 @@ namespace EllipticBit.RichEditorNET.Formatting
 			}
 		}
 
-		private static void InsertSpans(ITextDocument2 doc, ITextRange2 range, List<InlineSpan> spans) {
+		private static void InsertSpans(ITextDocument2 doc, IRichEditOle richOle, ITextRange2 range, List<InlineSpan> spans) {
 			for (int s = 0; s < spans.Count; s++) {
 				var span = spans[s];
 
 				if (span.ImageData != null) {
 					int imgStart = range.Start;
-					var comStream = CreateComStream(span.ImageData);
-					try {
-						range.InsertImage(PixelsToHimetric(span.ImageWidth), PixelsToHimetric(span.ImageHeight), 0, 0,
-								span.ImageAltText ?? "", comStream);
-						range.SetRange(imgStart + 1, imgStart + 1);
+					if (richOle != null) {
+						int hr = ImageOleObject.Insert(richOle, imgStart,
+							span.ImageData, span.ImageAltText ?? string.Empty,
+							PixelsToHimetric(span.ImageWidth), PixelsToHimetric(span.ImageHeight));
+						if (hr >= 0) {
+							range.SetRange(imgStart + 1, imgStart + 1);
 
-						if (!string.IsNullOrEmpty(span.Url)) {
-							var linkRange = doc.Range2(imgStart, imgStart + 1);
-							try {
-								linkRange.URL = "\"" + span.Url + "\"";
-							}
-							finally {
-								Marshal.ReleaseComObject(linkRange);
+							if (!string.IsNullOrEmpty(span.Url)) {
+								var linkRange = doc.Range2(imgStart, imgStart + 1);
+								try {
+									linkRange.URL = "\"" + span.Url + "\"";
+								}
+								finally {
+									Marshal.ReleaseComObject(linkRange);
+								}
 							}
 						}
-					}
-					finally {
-						Marshal.ReleaseComObject(comStream);
 					}
 					continue;
 				}

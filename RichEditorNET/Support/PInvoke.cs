@@ -13,6 +13,7 @@ namespace EllipticBit.RichEditorNET.Support
 		internal const int WM_ENTERMENULOOP = 0x0211;
 		internal const int WM_USER = 0x0400;
 		internal const int EM_GETOLEINTERFACE = WM_USER + 60;
+		internal const int EM_SETOLECALLBACK = WM_USER + 76;
 		internal const int EM_SETOPTIONS = WM_USER + 77;
 		internal const int EM_GETOPTIONS = WM_USER + 78;
 		internal const int EM_SETLANGOPTIONS = WM_USER + 120;
@@ -37,5 +38,55 @@ namespace EllipticBit.RichEditorNET.Support
 
 		[DllImport("ole32.dll")]
 		internal static extern void ReleaseStgMedium([In] ref System.Runtime.InteropServices.ComTypes.STGMEDIUM pmedium);
+
+		[DllImport("ole32.dll")]
+		internal static extern int CreateILockBytesOnHGlobal(IntPtr hGlobal, [MarshalAs(UnmanagedType.Bool)] bool fDeleteOnRelease, out ILockBytes pplkbyt);
+
+		[DllImport("ole32.dll")]
+		internal static extern int StgCreateDocfileOnILockBytes(ILockBytes plkbyt, uint grfMode, uint reserved, out IStorage ppstgOpen);
+
+		[DllImport("ole32.dll")]
+		internal static extern int OleCreateStaticFromData(
+			System.Runtime.InteropServices.ComTypes.IDataObject pSrcDataObj,
+			ref Guid riid,
+			uint renderopt,
+			ref System.Runtime.InteropServices.ComTypes.FORMATETC pFormatEtc,
+			IOleClientSite pClientSite,
+			IStorage pStg,
+			out IntPtr ppvObj);
+
+		[DllImport("ole32.dll")]
+		internal static extern int OleSetContainedObject(
+			[MarshalAs(UnmanagedType.IUnknown)] object pUnknown,
+			[MarshalAs(UnmanagedType.Bool)] bool fContained);
+
+		internal const uint OLERENDER_DRAW = 1;
+		internal const uint OLERENDER_FORMAT = 2;
+		internal const uint GMEM_MOVEABLE = 0x0002;
+		internal const uint GMEM_ZEROINIT = 0x0040;
+
+		[DllImport("kernel32.dll")]
+		internal static extern IntPtr GlobalAlloc(uint uFlags, UIntPtr dwBytes);
+
+		[DllImport("kernel32.dll")]
+		internal static extern IntPtr GlobalFree(IntPtr hMem);
+
+		[DllImport("gdi32.dll")]
+		internal static extern IntPtr SetEnhMetaFileBits(uint cbBuffer, byte[] lpData);
+
+		[DllImport("gdi32.dll")]
+		internal static extern bool DeleteEnhMetaFile(IntPtr hemf);
+
+		[DllImport("gdi32.dll")]
+		internal static extern uint GetEnhMetaFileBits(IntPtr hemf, uint cbBuffer, byte[] lpbBuffer);
+
+		[DllImport("kernel32.dll")]
+		internal static extern IntPtr GlobalLock(IntPtr hMem);
+
+		[DllImport("kernel32.dll")]
+		internal static extern bool GlobalUnlock(IntPtr hMem);
+
+		[DllImport("kernel32.dll")]
+		internal static extern UIntPtr GlobalSize(IntPtr hMem);
 	}
 }

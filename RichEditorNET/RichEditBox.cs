@@ -293,6 +293,8 @@ namespace EllipticBit.RichEditorNET
 		public event EventHandler? InsertLinkedThumbnailClicked;
 
 		private ITextDocument2? _textDocument;
+		private IRichEditOle? _richEditOle;
+		private RichEditOleCallback? _oleCallback;
 		private PopupToolbar? _activeToolbar;
 		private int _activeToolbarDpi;
 		private static readonly Dictionary<int, ToolbarIconCache> _iconCaches = new();
@@ -334,7 +336,7 @@ namespace EllipticBit.RichEditorNET
 		public string Html {
 			get {
 				if (_textDocument == null) return _pendingHtml ?? string.Empty;
-				return HtmlFormatter.ToHtml(TextDocument, EnableHtmlFontSizing, ExportCompleteHtmlDocument, Font.Name, Font.SizeInPoints);
+				return HtmlFormatter.ToHtml(TextDocument, Handle, EnableHtmlFontSizing, ExportCompleteHtmlDocument, Font.Name, Font.SizeInPoints);
 			}
 			set {
 				if (_textDocument == null) {
@@ -343,7 +345,7 @@ namespace EllipticBit.RichEditorNET
 					return;
 				}
 				Clear();
-				HtmlFormatter.FromHtml(TextDocument, value, EnableStrictHtml);
+				HtmlFormatter.FromHtml(TextDocument, _richEditOle, value, EnableStrictHtml);
 			}
 		}
 
@@ -369,14 +371,24 @@ namespace EllipticBit.RichEditorNET
 			PInvoke.SendMessage(Handle, PInvoke.EM_GETOLEINTERFACE, IntPtr.Zero, ref pOle);
 			if (pOle != IntPtr.Zero) {
 				_textDocument = Marshal.GetObjectForIUnknown(pOle) as ITextDocument2;
+				_richEditOle = Marshal.GetObjectForIUnknown(pOle) as IRichEditOle;
 				Marshal.Release(pOle);
+			}
+
+			_oleCallback = new RichEditOleCallback();
+			IntPtr pCallback = Marshal.GetIUnknownForObject(_oleCallback);
+			try {
+				PInvoke.SendMessage(Handle, PInvoke.EM_SETOLECALLBACK, IntPtr.Zero, pCallback);
+			}
+			finally {
+				Marshal.Release(pCallback);
 			}
 
 			PInvoke.SendMessage(Handle, PInvoke.EM_SETOPTIONS, (IntPtr)PInvoke.ECOOP_AND, (IntPtr)(~PInvoke.ECO_AUTOWORDSELECTION));
 			ApplySpellCheckOption();
 
 			if (_pendingHtml != null) {
-				HtmlFormatter.FromHtml(TextDocument, _pendingHtml, EnableStrictHtml);
+				HtmlFormatter.FromHtml(TextDocument, _richEditOle, _pendingHtml, EnableStrictHtml);
 				_pendingHtml = null;
 			}
 			else if (_pendingMarkdown != null) {
@@ -391,10 +403,17 @@ namespace EllipticBit.RichEditorNET
 				_activeToolbar = null;
 			}
 
+			if (_richEditOle != null) {
+				Marshal.ReleaseComObject(_richEditOle);
+				_richEditOle = null;
+			}
+
 			if (_textDocument != null) {
 				Marshal.ReleaseComObject(_textDocument);
 				_textDocument = null;
 			}
+
+			_oleCallback = null;
 
 			base.OnHandleDestroyed(e);
 		}
@@ -1067,19 +1086,10 @@ namespace EllipticBit.RichEditorNET
 				GetImageFormat(image);
 			}
 
-			var comStream = CreateComStream(imageData);
-			try {
-				var range = GetSelectionRange();
-				try {
-					range.InsertImage(PixelsToHimetric(DefaultImageWidth), PixelsToHimetric(DefaultImageHeight), 0, 0, altText ?? "", comStream);
-				}
-				finally {
-					Marshal.ReleaseComObject(range);
-				}
-			}
-			finally {
-				Marshal.ReleaseComObject(comStream);
-			}
+			if (_richEditOle == null) throw new InvalidOperationException("The control handle has not been created.");
+			int hr = ImageOleObject.Insert(_richEditOle, ReoConstants.REO_CP_SELECTION, imageData, altText ?? string.Empty,
+				PixelsToHimetric(DefaultImageWidth), PixelsToHimetric(DefaultImageHeight));
+			if (hr < 0) Marshal.ThrowExceptionForHR(hr);
 		}
 
 		/// <summary>
@@ -1107,27 +1117,18 @@ namespace EllipticBit.RichEditorNET
 				}
 			}
 
-			var comStream = CreateComStream(thumbnailData);
-			try {
-				int cpStart = SelectionStart;
-				var range = GetSelectionRange();
-				try {
-					range.InsertImage(PixelsToHimetric(DefaultImageWidth), PixelsToHimetric(DefaultImageHeight), 0, 0, altText ?? "", comStream);
-				}
-				finally {
-					Marshal.ReleaseComObject(range);
-				}
+			if (_richEditOle == null) throw new InvalidOperationException("The control handle has not been created.");
+			int cpStart = SelectionStart;
+			int hr = ImageOleObject.Insert(_richEditOle, ReoConstants.REO_CP_SELECTION, thumbnailData, altText ?? string.Empty,
+				PixelsToHimetric(DefaultImageWidth), PixelsToHimetric(DefaultImageHeight));
+			if (hr < 0) Marshal.ThrowExceptionForHR(hr);
 
-				var linkRange = TextDocument.Range2(cpStart, cpStart + 1);
-				try {
-					linkRange.URL = "\"" + imageUrl + "\"";
-				}
-				finally {
-					Marshal.ReleaseComObject(linkRange);
-				}
+			var linkRange = TextDocument.Range2(cpStart, cpStart + 1);
+			try {
+				linkRange.URL = "\"" + imageUrl + "\"";
 			}
 			finally {
-				Marshal.ReleaseComObject(comStream);
+				Marshal.ReleaseComObject(linkRange);
 			}
 		}
 
@@ -1137,14 +1138,10 @@ namespace EllipticBit.RichEditorNET
 		/// or the image has no alt text.
 		/// </summary>
 		public string GetImageAltText() {
-			var range = TextDocument.Range2(SelectionStart, SelectionStart + 1);
-			try {
-				if (range.Char != 0xFFFC) return string.Empty;
-				return range.GetText2(tomConstants.tomTextize) ?? string.Empty;
-			}
-			finally {
-				Marshal.ReleaseComObject(range);
-			}
+			if (_richEditOle == null) return string.Empty;
+			if (ImageOleObject.TryRead(_richEditOle, SelectionStart, out _, out var alt, out _, out _))
+				return alt ?? string.Empty;
+			return string.Empty;
 		}
 
 		private static ImageFormat GetImageFormat(Image image) {
