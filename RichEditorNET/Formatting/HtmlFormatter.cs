@@ -499,7 +499,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 		}
 
 		private static string ToWebSafeBase64(byte[] data) {
-			return Convert.ToBase64String(data).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+			return Convert.ToBase64String(data);
 		}
 
 		#endregion
