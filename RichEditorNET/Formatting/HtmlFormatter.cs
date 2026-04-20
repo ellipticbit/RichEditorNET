@@ -15,7 +15,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 {
 	internal static class HtmlFormatter
 	{
-		internal static string ToHtml(ITextDocument2 doc, IntPtr hwnd, bool htmlFontSizing, bool completeDocument = false, string defaultFontName = "", float defaultFontSize = 0f) {
+		internal static string ToHtml(ITextDocument2 doc, IntPtr hwnd, bool htmlFontSizing, bool completeDocument = false, string defaultFontName = "", float defaultFontSize = 0f, HtmlImageFormat imageFormat = HtmlImageFormat.Png) {
 			var sb = new StringBuilder(4096);
 			if (completeDocument) sb.Append("<html><body>");
 			var probe = doc.Range2(0, 0);
@@ -131,7 +131,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 						liOpenStack[liOpenStack.Count - 1] = true;
 
 						if (textEnd > paraStart)
-							EmitHtmlInlineContent(doc, richOle, sb, paraStart, textEnd, !htmlFontSizing, false, defaultFontName, defaultFontSize);
+							EmitHtmlInlineContent(doc, richOle, sb, paraStart, textEnd, !htmlFontSizing, false, defaultFontName, defaultFontSize, imageFormat);
 					}
 					else {
 						CloseAllLists(sb, listTypeStack, liOpenStack);
@@ -154,7 +154,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 							baseSize = BlockStyleHelper.PreformattedPointSize;
 						}
 						if (textEnd > paraStart)
-							EmitHtmlInlineContent(doc, richOle, sb, paraStart, textEnd, !htmlFontSizing, headingLevel > 0, baseFont, baseSize);
+							EmitHtmlInlineContent(doc, richOle, sb, paraStart, textEnd, !htmlFontSizing, headingLevel > 0, baseFont, baseSize, imageFormat);
 						sb.Append("</").Append(tag).Append('>');
 					}
 
@@ -177,7 +177,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 
 		#region - HTML Emission -
 
-		private static void EmitHtmlInlineContent(ITextDocument2 doc, IRichEditOle richOle, StringBuilder sb, int start, int end, bool emitFontStyles, bool suppressBold, string defaultFontName, float defaultFontSize) {
+		private static void EmitHtmlInlineContent(ITextDocument2 doc, IRichEditOle richOle, StringBuilder sb, int start, int end, bool emitFontStyles, bool suppressBold, string defaultFontName, float defaultFontSize, HtmlImageFormat imageFormat) {
 			bool curBold = false, curItalic = false, curStrike = false, curSup = false, curSub = false;
 			int curUnderline = 0, curFore = tomConstants.tomAutoColor, curBack = tomConstants.tomAutoColor;
 			string curUrl = string.Empty;
@@ -280,7 +280,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 								CloseHtmlInlineTags(sb, curBold, curItalic, curStrike, curUnderline, curSup, curSub, curFore, curBack, curUrl, curFontName, curFontSize);
 								tagsOpen = false;
 							}
-							EmitImageTag(doc, richOle, sb, runDocStart + docOffset + idx);
+							EmitImageTag(doc, richOle, sb, runDocStart + docOffset + idx, imageFormat);
 							segStart = idx + 1;
 						}
 					}
@@ -417,7 +417,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 			return text.Substring(endQuote + 1);
 		}
 
-		private static void EmitImageTag(ITextDocument2 doc, IRichEditOle richOle, StringBuilder sb, int imgPos) {
+		private static void EmitImageTag(ITextDocument2 doc, IRichEditOle richOle, StringBuilder sb, int imgPos, HtmlImageFormat imageFormat) {
 			var imgRange = doc.Range2(imgPos, imgPos + 1);
 			string url;
 			try {
@@ -442,9 +442,9 @@ namespace EllipticBit.RichEditorNET.Formatting
 
 			int widthPx = HimetricToPixels(widthHimetric);
 			int heightPx = HimetricToPixels(heightHimetric);
-			byte[] emit = ConvertImageBytesToPng(imageData, ref widthPx, ref heightPx) ?? imageData;
+			byte[] emit = ConvertImageBytes(imageData, imageFormat, ref widthPx, ref heightPx) ?? imageData;
 
-			string mimeType = GetEmitImageMimeType(emit);
+						string mimeType = GetEmitImageMimeType(emit);
 			string base64 = ToWebSafeBase64(emit);
 
 			if (url.Length > 0)
@@ -463,17 +463,18 @@ namespace EllipticBit.RichEditorNET.Formatting
 				sb.Append("</a>");
 		}
 
-		private static byte[] ConvertImageBytesToPng(byte[] data, ref int widthPx, ref int heightPx) {
+		private static byte[] ConvertImageBytes(byte[] data, HtmlImageFormat targetFormat, ref int widthPx, ref int heightPx) {
 			try {
 				using (var ms = new MemoryStream(data))
 				using (var image = Image.FromStream(ms)) {
 					if (widthPx <= 0) widthPx = image.Width;
 					if (heightPx <= 0) heightPx = image.Height;
 					var guid = image.RawFormat.Guid;
-					if (guid == ImageFormat.Png.Guid || guid == ImageFormat.Jpeg.Guid || guid == ImageFormat.Gif.Guid)
+					var targetImageFormat = targetFormat.ToImageFormat();
+					if (guid == targetImageFormat.Guid)
 						return data;
 					using (var outMs = new MemoryStream()) {
-						image.Save(outMs, ImageFormat.Png);
+						image.Save(outMs, targetImageFormat);
 						return outMs.ToArray();
 					}
 				}

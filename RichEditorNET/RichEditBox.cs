@@ -251,6 +251,11 @@ namespace EllipticBit.RichEditorNET
 		[Description("When true, the Html property getter returns a complete HTML document with html and body tags. When false, returns only the document fragment.")]
 		public bool ExportCompleteHtmlDocument { get; set; }
 
+		[DefaultValue(HtmlImageFormat.Png)]
+		[Category("Behavior")]
+		[Description("Specifies the image format to use when embedding images in HTML output. Defaults to PNG.")]
+		public HtmlImageFormat HtmlThumbnailImageFormat { get; set; } = HtmlImageFormat.Png;
+
 		[DefaultValue(false)]
 		[Category("Behavior")]
 		[Description("When true, prevents the popup editing toolbar from being displayed.")]
@@ -336,7 +341,7 @@ namespace EllipticBit.RichEditorNET
 		public string Html {
 			get {
 				if (_textDocument == null) return _pendingHtml ?? string.Empty;
-				return HtmlFormatter.ToHtml(TextDocument, Handle, EnableHtmlFontSizing, ExportCompleteHtmlDocument, Font.Name, Font.SizeInPoints);
+				return HtmlFormatter.ToHtml(TextDocument, Handle, EnableHtmlFontSizing, ExportCompleteHtmlDocument, Font.Name, Font.SizeInPoints, HtmlThumbnailImageFormat);
 			}
 			set {
 				if (_textDocument == null) {
