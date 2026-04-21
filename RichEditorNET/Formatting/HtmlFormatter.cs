@@ -288,7 +288,8 @@ namespace EllipticBit.RichEditorNET.Formatting
 								tagsOpen = true;
 							}
 
-							sb.Append(WebUtility.HtmlEncode(text.Substring(segStart, idx - segStart)));
+							string encodedText = WebUtility.HtmlEncode(text.Substring(segStart, idx - segStart));
+							sb.Append(encodedText.Replace("\t", "&#9;"));
 						}
 
 						if (atImage) {
@@ -793,7 +794,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 			"style", "script", "head", "title", "noscript"
 		};
 
-		private static readonly char[] TrimmableWhitespace = { ' ', '\t', '\r', '\n', '\f' };
+		private static readonly char[] TrimmableWhitespace = { ' ', '\r', '\n', '\f' };
 
 		private static readonly HashSet<string> SupportedTags = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
 			"b", "strong", "i", "em", "u", "ins", "s", "del", "strike", "sup", "sub",
@@ -1238,11 +1239,15 @@ namespace EllipticBit.RichEditorNET.Formatting
 			bool lastWasSpace = false;
 			for (int i = 0; i < text.Length; i++) {
 				char c = text[i];
-				if (c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '\f') {
+				if (c == ' ' || c == '\r' || c == '\n' || c == '\f') {
 					if (!lastWasSpace) {
 						sb.Append(' ');
 						lastWasSpace = true;
 					}
+				}
+				else if (c == '\t') {
+					sb.Append('\t');
+					lastWasSpace = false;
 				}
 				else {
 					sb.Append(c);
