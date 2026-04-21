@@ -1793,7 +1793,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 								prevPara.ListLevelIndex = prevBlock.ListLevel;
 								if (prevBlock.ListType != tomConstants.tomListNone) {
 									prevPara.ListStart = 1;
-									prevPara.SetIndents(0, prevBlock.ListLevel * 18f, 0);
+									prevPara.SetIndents(18f, prevBlock.ListLevel * 18f, 0);
 								}
 
 								if (prevBlock.Alignment != tomConstants.tomAlignLeft)
@@ -1877,7 +1877,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 						lastPara.ListLevelIndex = lastBlock.ListLevel;
 						if (lastBlock.ListType != tomConstants.tomListNone) {
 							lastPara.ListStart = 1;
-							lastPara.SetIndents(0, lastBlock.ListLevel * 18f, 0);
+							lastPara.SetIndents(18f, lastBlock.ListLevel * 18f, 0);
 						}
 
 						if (lastBlock.Alignment != tomConstants.tomAlignLeft)
