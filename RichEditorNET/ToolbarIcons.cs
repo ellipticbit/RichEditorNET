@@ -419,5 +419,47 @@ namespace EllipticBit.RichEditorNET
 				}
 			});
 		}
+
+		internal static Bitmap ListLevelIncrease(float scale)
+		{
+			return Create(scale, g =>
+			{
+				var lineColor = Color.FromArgb(60, 60, 60);
+				var arrowColor = Color.FromArgb(50, 50, 255);
+				using (var pen = new Pen(lineColor, 6f))
+				{
+					g.DrawLine(pen, 4, 10, 60, 10);
+					g.DrawLine(pen, 28, 26, 60, 26);
+					g.DrawLine(pen, 28, 42, 60, 42);
+					g.DrawLine(pen, 4, 58, 60, 58);
+				}
+				using (var brush = new SolidBrush(arrowColor))
+				{
+					var pts = new[] { new PointF(6, 24), new PointF(22, 34), new PointF(6, 44) };
+					g.FillPolygon(brush, pts);
+				}
+			});
+		}
+
+		internal static Bitmap ListLevelDecrease(float scale)
+		{
+			return Create(scale, g =>
+			{
+				var lineColor = Color.FromArgb(60, 60, 60);
+				var arrowColor = Color.FromArgb(50, 50, 255);
+				using (var pen = new Pen(lineColor, 6f))
+				{
+					g.DrawLine(pen, 4, 10, 60, 10);
+					g.DrawLine(pen, 28, 26, 60, 26);
+					g.DrawLine(pen, 28, 42, 60, 42);
+					g.DrawLine(pen, 4, 58, 60, 58);
+				}
+				using (var brush = new SolidBrush(arrowColor))
+				{
+					var pts = new[] { new PointF(22, 24), new PointF(6, 34), new PointF(22, 44) };
+					g.FillPolygon(brush, pts);
+				}
+			});
+		}
 	}
 }

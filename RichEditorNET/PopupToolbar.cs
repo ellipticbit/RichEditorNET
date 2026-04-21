@@ -26,6 +26,8 @@ namespace EllipticBit.RichEditorNET
 		private ToolStripComboBox _fontCombo;
 		private ToolStripComboBox _sizeCombo;
 		private ToolStripComboBox _blockStyleCombo;
+		private ToolStripButton _listLevelIncreaseButton;
+		private ToolStripButton _listLevelDecreaseButton;
 		private Color _lastFontColor = Color.Black;
 		private Color _lastBackgroundColor = Color.Yellow;
 		private bool _updatingState;
@@ -55,9 +57,19 @@ namespace EllipticBit.RichEditorNET
 			Controls.Add(_bottomStrip);
 			Controls.Add(_topStrip);
 
+			// Measure with the conditionally-visible list level buttons included so that the
+			// form is wide enough to accommodate them when they later become visible.
+			bool priorIncrease = _listLevelIncreaseButton?.Visible ?? false;
+			bool priorDecrease = _listLevelDecreaseButton?.Visible ?? false;
+			if (_listLevelIncreaseButton != null) _listLevelIncreaseButton.Visible = _editor.EnableLists;
+			if (_listLevelDecreaseButton != null) _listLevelDecreaseButton.Visible = _editor.EnableLists;
+
 			var totalWidth = Math.Max(_topStrip.PreferredSize.Width, _bottomStrip.PreferredSize.Width) + Padding.Horizontal;
 			var totalHeight = _topStrip.PreferredSize.Height + _bottomStrip.PreferredSize.Height + Padding.Vertical;
 			ClientSize = new Size(totalWidth, totalHeight);
+
+			if (_listLevelIncreaseButton != null) _listLevelIncreaseButton.Visible = priorIncrease;
+			if (_listLevelDecreaseButton != null) _listLevelDecreaseButton.Visible = priorDecrease;
 		}
 
 		protected override CreateParams CreateParams
@@ -255,6 +267,11 @@ namespace EllipticBit.RichEditorNET
 			strip.Items.Add(CreateButton(_icons.BulletList, "Bullet List", _editor.EnableLists, (s, e) => WithEditorSelection(() => { _editor.ToggleList(ListStyle.Bullet); RefreshState(); })));
 			strip.Items.Add(CreateButton(_icons.OrderedList, "Ordered List", _editor.EnableLists, (s, e) => WithEditorSelection(() => { _editor.ToggleList(ListStyle.Decimal); RefreshState(); })));
 
+			_listLevelIncreaseButton = CreateButton(_icons.ListLevelIncrease, "Increase List Level", false, (s, e) => WithEditorSelection(() => { _editor.IncreaseListLevel(); RefreshState(); }));
+			_listLevelDecreaseButton = CreateButton(_icons.ListLevelDecrease, "Decrease List Level", false, (s, e) => WithEditorSelection(() => { _editor.DecreaseListLevel(); RefreshState(); }));
+			strip.Items.Add(_listLevelIncreaseButton);
+			strip.Items.Add(_listLevelDecreaseButton);
+
 			return strip;
 		}
 
@@ -416,6 +433,10 @@ namespace EllipticBit.RichEditorNET
 						int listType = para.ListType & 0xFFFF;
 						SetChecked("Bullet List", listType == (int)ListStyle.Bullet);
 						SetChecked("Ordered List", listType >= (int)ListStyle.Decimal);
+
+						bool inList = _editor.EnableLists && listType != tomConstants.tomListNone;
+						if (_listLevelIncreaseButton != null) _listLevelIncreaseButton.Visible = inList;
+						if (_listLevelDecreaseButton != null) _listLevelDecreaseButton.Visible = inList && para.ListLevelIndex > 0;
 					}
 					finally
 					{

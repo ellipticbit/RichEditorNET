@@ -34,6 +34,8 @@ namespace EllipticBit.RichEditorNET
 		internal Bitmap InsertLinkedThumbnail { get; }
 		internal Bitmap BulletList { get; }
 		internal Bitmap OrderedList { get; }
+		internal Bitmap ListLevelIncrease { get; }
+		internal Bitmap ListLevelDecrease { get; }
 
 		internal ToolbarIconCache(float dpiScale)
 		{
@@ -63,6 +65,8 @@ namespace EllipticBit.RichEditorNET
 			InsertLinkedThumbnail = Cache(ToolbarIcons.InsertLinkedThumbnail(dpiScale));
 			BulletList = Cache(ToolbarIcons.BulletList(dpiScale));
 			OrderedList = Cache(ToolbarIcons.OrderedList(dpiScale));
+			ListLevelIncrease = Cache(ToolbarIcons.ListLevelIncrease(dpiScale));
+			ListLevelDecrease = Cache(ToolbarIcons.ListLevelDecrease(dpiScale));
 		}
 
 		private Bitmap Cache(Bitmap bmp)

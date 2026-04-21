@@ -509,9 +509,14 @@ namespace EllipticBit.RichEditorNET
 		protected override void OnMouseDown(MouseEventArgs e) {
 			if (e.Button == MouseButtons.Right) {
 				int charIndex = GetCharIndexFromPosition(e.Location);
+				if (charIndex < 0) charIndex = 0;
+				if (charIndex > TextLength) charIndex = TextLength;
+
 				if (SelectionLength == 0 || charIndex < SelectionStart || charIndex >= SelectionStart + SelectionLength) {
-					SelectionStart = charIndex;
-					SelectionLength = 0;
+					// Use Select() to atomically set both start and length. Setting SelectionStart
+					// on its own preserves the existing selection end, producing a large intermediate
+					// range that can cause the control to scroll before SelectionLength = 0 collapses it.
+					Select(charIndex, 0);
 				}
 
 				return;
@@ -927,6 +932,12 @@ namespace EllipticBit.RichEditorNET
 		}
 
 		/// <summary>
+		/// Per-level indentation step (in points) applied when increasing or decreasing
+		/// the list nesting level. Matches the step used by <see cref="Formatting.HtmlFormatter"/>.
+		/// </summary>
+		private const float ListLevelIndentPoints = 18f;
+
+		/// <summary>
 		/// Increases the list nesting level of the current selection by one.
 		/// Has no effect if the selection is not in a list.
 		/// </summary>
@@ -936,8 +947,14 @@ namespace EllipticBit.RichEditorNET
 			try {
 				var para = range.Para;
 				try {
-					if (para.ListType != tomConstants.tomListNone) {
+					int listType = para.ListType;
+					if (listType != tomConstants.tomListNone) {
 						para.ListLevelIndex++;
+						// ListLevelIndex only cycles the bullet/number glyph. Paragraph indentation
+						// is not derived from it, so we must shift LeftIndent explicitly to visually
+						// nest the item. Re-assigning ListType (via None -> original) refreshes the
+						// bullet prefix for the new level.
+						para.SetIndents(para.FirstLineIndent, para.LeftIndent + ListLevelIndentPoints, para.RightIndent);
 					}
 				}
 				finally {
@@ -959,8 +976,16 @@ namespace EllipticBit.RichEditorNET
 			try {
 				var para = range.Para;
 				try {
-					if (para.ListType != tomConstants.tomListNone && para.ListLevelIndex > 0) {
+					int listType = para.ListType;
+					if (listType != tomConstants.tomListNone && para.ListLevelIndex > 0) {
 						para.ListLevelIndex--;
+						// ListLevelIndex only cycles the bullet/number glyph. Paragraph indentation
+						// is not derived from it, so we must shift LeftIndent explicitly to visually
+						// un-nest the item. Re-assigning ListType (via None -> original) refreshes the
+						// bullet prefix for the new level.
+						float newLeft = para.LeftIndent - ListLevelIndentPoints;
+						if (newLeft < 0f) newLeft = 0f;
+						para.SetIndents(para.FirstLineIndent, newLeft, para.RightIndent);
 					}
 				}
 				finally {
