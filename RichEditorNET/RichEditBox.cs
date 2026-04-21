@@ -331,8 +331,14 @@ namespace EllipticBit.RichEditorNET
 					_pendingHtml = null;
 					return;
 				}
+
+				bool priorROValue = this.ReadOnly;
+				this.ReadOnly = false;
+
 				Clear();
 				MarkdownFormatter.FromMarkdown(TextDocument, value, EnableGithubMarkdown);
+
+				this.ReadOnly = priorROValue;
 			}
 		}
 
@@ -352,8 +358,14 @@ namespace EllipticBit.RichEditorNET
 					_pendingMarkdown = null;
 					return;
 				}
+
+				bool priorROValue = this.ReadOnly;
+				this.ReadOnly = false;
+
 				Clear();
 				HtmlFormatter.FromHtml(TextDocument, _richEditOle, value, EnableStrictHtml);
+
+				this.ReadOnly = priorROValue;
 			}
 		}
 
@@ -395,6 +407,9 @@ namespace EllipticBit.RichEditorNET
 			PInvoke.SendMessage(Handle, PInvoke.EM_SETOPTIONS, (IntPtr)PInvoke.ECOOP_AND, (IntPtr)(~PInvoke.ECO_AUTOWORDSELECTION));
 			ApplySpellCheckOption();
 
+			bool priorROValue = this.ReadOnly;
+			this.ReadOnly = false;
+
 			if (_pendingHtml != null) {
 				HtmlFormatter.FromHtml(TextDocument, _richEditOle, _pendingHtml, EnableStrictHtml);
 				_pendingHtml = null;
@@ -403,6 +418,8 @@ namespace EllipticBit.RichEditorNET
 				MarkdownFormatter.FromMarkdown(TextDocument, _pendingMarkdown, EnableGithubMarkdown);
 				_pendingMarkdown = null;
 			}
+
+			this.ReadOnly = priorROValue;
 		}
 
 		protected override void OnHandleDestroyed(EventArgs e) {
