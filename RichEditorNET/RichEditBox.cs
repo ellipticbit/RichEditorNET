@@ -326,6 +326,13 @@ namespace EllipticBit.RichEditorNET
 				return MarkdownFormatter.ToMarkdown(TextDocument, EnableGithubMarkdown);
 			}
 			set {
+				this.ClearUndo();
+				//If value is empty then just clear the box and return
+				if (string.IsNullOrEmpty(value)) {
+					this.Clear();
+					return;
+				}
+
 				if (_textDocument == null) {
 					_pendingMarkdown = value;
 					_pendingHtml = null;
@@ -353,6 +360,13 @@ namespace EllipticBit.RichEditorNET
 				return HtmlFormatter.ToHtml(TextDocument, Handle, EnableHtmlFontSizing, ExportCompleteHtmlDocument, Font.Name, Font.SizeInPoints, HtmlThumbnailImageFormat);
 			}
 			set {
+				this.ClearUndo();
+				//If value is empty then just clear the box and return
+				if (string.IsNullOrEmpty(value)) {
+					this.Clear();
+					return;
+				}
+
 				if (_textDocument == null) {
 					_pendingHtml = value;
 					_pendingMarkdown = null;
