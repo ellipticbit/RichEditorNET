@@ -11,6 +11,8 @@ using System.Text;
 using EllipticBit.RichEditorNET.Support;
 using EllipticBit.RichEditorNET.TextObjectModel2;
 
+using static System.Net.Mime.MediaTypeNames;
+
 namespace EllipticBit.RichEditorNET.Formatting
 {
 	internal static class HtmlFormatter
@@ -1713,8 +1715,10 @@ namespace EllipticBit.RichEditorNET.Formatting
 										: prevBlock.ListType | tomConstants.tomListPeriod)
 									: tomConstants.tomListNone;
 								prevPara.ListLevelIndex = prevBlock.ListLevel;
-								if (prevBlock.ListType != tomConstants.tomListNone)
+								if (prevBlock.ListType != tomConstants.tomListNone) {
+									prevPara.ListStart = 1;
 									prevPara.SetIndents(0, prevBlock.ListLevel * 18f, 0);
+								}
 								if (prevBlock.Alignment != tomConstants.tomAlignLeft)
 									prevPara.Alignment = prevBlock.Alignment;
 							}
@@ -1794,8 +1798,10 @@ namespace EllipticBit.RichEditorNET.Formatting
 								: lastBlock.ListType | tomConstants.tomListPeriod)
 							: tomConstants.tomListNone;
 						lastPara.ListLevelIndex = lastBlock.ListLevel;
-						if (lastBlock.ListType != tomConstants.tomListNone)
+						if (lastBlock.ListType != tomConstants.tomListNone) {
+							lastPara.ListStart = 1;
 							lastPara.SetIndents(0, lastBlock.ListLevel * 18f, 0);
+						}
 						if (lastBlock.Alignment != tomConstants.tomAlignLeft)
 							lastPara.Alignment = lastBlock.Alignment;
 					}
