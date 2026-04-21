@@ -46,6 +46,7 @@ namespace Test
 				"<h4>Heading 4</h4>" +
 				"<h5>Heading 5</h5>" +
 				"<h6>Heading 6</h6>" +
+				"<p></p>" +
 
 				// Bold variants
 				"<p>This is <b>bold with b</b> and <strong>bold with strong</strong> " +

@@ -889,6 +889,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 			int preDepth = 0;
 			int ignoreDepth = 0;
 			string ignoreTag = null;
+			bool lastWasBlockOpen = false;
 
 			for (int t = 0; t < tokens.Count; t++) {
 				var token = tokens[t];
@@ -904,6 +905,8 @@ namespace EllipticBit.RichEditorNET.Formatting
 				if (strict)
 					ValidateToken(token);
 
+				bool isBlockOpen = false;
+
 				switch (token.Type) {
 					case TokenType.Text:
 						if (preDepth > 0) {
@@ -915,7 +918,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 									line = line.Substring(0, line.Length - 1);
 								if (li > 0) {
 									FlushBlock(blocks, ref currentSpans, currentListType, currentListLevel,
-										currentHeadingLevel, true, ComputeBlockAlignment(styleStack));
+										currentHeadingLevel, true, ComputeBlockAlignment(styleStack), true);
 								}
 
 								if (line.Length > 0)
@@ -933,6 +936,8 @@ namespace EllipticBit.RichEditorNET.Formatting
 						break;
 
 					case TokenType.OpenTag:
+						if (BlockElements.Contains(token.TagName) || token.TagName == "li")
+							isBlockOpen = true;
 						ProcessOpenTag(token, blocks, styleStack, listStack, ref currentSpans,
 							ref currentListType, ref currentListLevel, ref currentHeadingLevel,
 							ref currentPreformatted, ref preDepth, ref ignoreDepth, ref ignoreTag);
@@ -941,7 +946,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 					case TokenType.SelfClosingTag:
 						if (token.TagName == "br" || token.TagName == "hr") {
 							FlushBlock(blocks, ref currentSpans, currentListType, currentListLevel,
-								currentHeadingLevel, currentPreformatted, ComputeBlockAlignment(styleStack));
+								currentHeadingLevel, currentPreformatted, ComputeBlockAlignment(styleStack), true);
 							if (listStack.Count == 0) {
 								currentListType = tomConstants.tomListNone;
 								currentListLevel = 0;
@@ -982,10 +987,15 @@ namespace EllipticBit.RichEditorNET.Formatting
 						break;
 
 					case TokenType.CloseTag:
+						bool forceEmpty = lastWasBlockOpen && (BlockElements.Contains(token.TagName) || token.TagName == "li");
 						ProcessCloseTag(token, blocks, styleStack, listStack, ref currentSpans,
 							ref currentListType, ref currentListLevel, ref currentHeadingLevel,
-							ref currentPreformatted, ref preDepth);
+							ref currentPreformatted, ref preDepth, forceEmpty);
 						break;
+				}
+
+				if (token.Type != TokenType.Text || token.Text.Trim(TrimmableWhitespace).Length != 0) {
+					lastWasBlockOpen = isBlockOpen;
 				}
 			}
 
@@ -1089,13 +1099,13 @@ namespace EllipticBit.RichEditorNET.Formatting
 
 		private static void ProcessCloseTag(HtmlToken token, List<ParagraphBlock> blocks, List<StyleEntry> styleStack,
 			List<int> listStack, ref List<InlineSpan> currentSpans, ref int currentListType, ref int currentListLevel,
-			ref int currentHeadingLevel, ref bool currentPreformatted, ref int preDepth) {
+			ref int currentHeadingLevel, ref bool currentPreformatted, ref int preDepth, bool forceEmit = false) {
 
 			if (token.TagName == "html" || token.TagName == "body") return;
 
 			if (token.TagName == "ul" || token.TagName == "ol") {
 				FlushBlock(blocks, ref currentSpans, currentListType, currentListLevel,
-					currentHeadingLevel, currentPreformatted, ComputeBlockAlignment(styleStack));
+					currentHeadingLevel, currentPreformatted, ComputeBlockAlignment(styleStack), forceEmit);
 				if (listStack.Count > 0)
 					listStack.RemoveAt(listStack.Count - 1);
 				if (listStack.Count > 0) {
@@ -1112,7 +1122,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 
 			if (token.TagName == "li") {
 				FlushBlock(blocks, ref currentSpans, currentListType, currentListLevel,
-					currentHeadingLevel, currentPreformatted, ComputeBlockAlignment(styleStack));
+					currentHeadingLevel, currentPreformatted, ComputeBlockAlignment(styleStack), forceEmit);
 				PopStyleEntry(styleStack, token.TagName);
 				if (listStack.Count > 0) {
 					currentListType = listStack[listStack.Count - 1];
@@ -1128,7 +1138,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 
 			if (token.TagName == "pre") {
 				FlushBlock(blocks, ref currentSpans, currentListType, currentListLevel,
-					currentHeadingLevel, currentPreformatted, ComputeBlockAlignment(styleStack));
+					currentHeadingLevel, currentPreformatted, ComputeBlockAlignment(styleStack), forceEmit);
 				PopStyleEntry(styleStack, token.TagName);
 				if (preDepth > 0) preDepth--;
 				currentPreformatted = preDepth > 0;
@@ -1142,7 +1152,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 
 			if (GetHeadingLevel(token.TagName) > 0) {
 				FlushBlock(blocks, ref currentSpans, currentListType, currentListLevel,
-					currentHeadingLevel, currentPreformatted, ComputeBlockAlignment(styleStack));
+					currentHeadingLevel, currentPreformatted, ComputeBlockAlignment(styleStack), forceEmit);
 				PopStyleEntry(styleStack, token.TagName);
 				currentHeadingLevel = 0;
 				currentPreformatted = preDepth > 0;
@@ -1156,7 +1166,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 
 			if (BlockElements.Contains(token.TagName)) {
 				FlushBlock(blocks, ref currentSpans, currentListType, currentListLevel,
-					currentHeadingLevel, currentPreformatted, ComputeBlockAlignment(styleStack));
+					currentHeadingLevel, currentPreformatted, ComputeBlockAlignment(styleStack), forceEmit);
 				PopStyleEntry(styleStack, token.TagName);
 				if (listStack.Count == 0) {
 					currentListType = tomConstants.tomListNone;
@@ -1170,12 +1180,12 @@ namespace EllipticBit.RichEditorNET.Formatting
 		}
 
 		private static void FlushBlock(List<ParagraphBlock> blocks, ref List<InlineSpan> currentSpans,
-			int listType, int listLevel, int headingLevel, bool preformatted, int alignment) {
-			if (currentSpans.Count == 0) return;
+			int listType, int listLevel, int headingLevel, bool preformatted, int alignment, bool forceEmit = false) {
+			if (currentSpans.Count == 0 && !forceEmit) return;
 
-			if (!preformatted)
+			if (!preformatted && currentSpans.Count > 0)
 				TrimBlockWhitespace(currentSpans);
-			if (currentSpans.Count == 0) return;
+			if (currentSpans.Count == 0 && !forceEmit) return;
 
 			blocks.Add(new ParagraphBlock {
 				Spans = currentSpans,
