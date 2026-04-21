@@ -327,11 +327,9 @@ namespace EllipticBit.RichEditorNET
 			}
 			set {
 				this.ClearUndo();
+				this.Clear();
 				//If value is empty then just clear the box and return
-				if (string.IsNullOrEmpty(value)) {
-					this.Clear();
-					return;
-				}
+				if (string.IsNullOrEmpty(value)) return;
 
 				if (_textDocument == null) {
 					_pendingMarkdown = value;
@@ -361,11 +359,9 @@ namespace EllipticBit.RichEditorNET
 			}
 			set {
 				this.ClearUndo();
+				this.Clear();
 				//If value is empty then just clear the box and return
-				if (string.IsNullOrEmpty(value)) {
-					this.Clear();
-					return;
-				}
+				if (string.IsNullOrEmpty(value)) return;
 
 				if (_textDocument == null) {
 					_pendingHtml = value;
