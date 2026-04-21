@@ -11,8 +11,6 @@ using System.Text;
 using EllipticBit.RichEditorNET.Support;
 using EllipticBit.RichEditorNET.TextObjectModel2;
 
-using static System.Net.Mime.MediaTypeNames;
-
 namespace EllipticBit.RichEditorNET.Formatting
 {
 	internal static class HtmlFormatter
@@ -34,143 +32,151 @@ namespace EllipticBit.RichEditorNET.Formatting
 				IntPtr pOle = IntPtr.Zero;
 				PInvoke.SendMessage(hwnd, PInvoke.EM_GETOLEINTERFACE, IntPtr.Zero, ref pOle);
 				if (pOle != IntPtr.Zero) {
-					try { richOle = Marshal.GetObjectForIUnknown(pOle) as IRichEditOle; }
-					catch { richOle = null; }
+					try {
+						richOle = Marshal.GetObjectForIUnknown(pOle) as IRichEditOle;
+					}
+					catch {
+						richOle = null;
+					}
+
 					Marshal.Release(pOle);
 				}
 			}
 
 			try {
-			int pos = 0;
-			var listTypeStack = new List<int>();
-			var liOpenStack = new List<bool>();
+				int pos = 0;
+				var listTypeStack = new List<int>();
+				var liOpenStack = new List<bool>();
 
-			while (pos < storyLength) {
-				var paraRange = doc.Range2(pos, pos);
-				try {
-					paraRange.Expand(tomConstants.tomParagraph);
-					int paraStart = paraRange.Start;
-					int paraEnd = paraRange.End;
-					int textEnd = paraEnd > paraStart ? paraEnd - 1 : paraEnd;
-
-					var para = paraRange.Para;
-					int listType;
-					int listLevel;
-					int alignment;
+				while (pos < storyLength) {
+					var paraRange = doc.Range2(pos, pos);
 					try {
-						listType = para.ListType & 0xFFFF;
-						listLevel = para.ListLevelIndex;
-						alignment = para.Alignment;
-						if (alignment < 0 || alignment > 3) alignment = tomConstants.tomAlignLeft;
-					}
-					finally {
-						Marshal.ReleaseComObject(para);
-					}
+						paraRange.Expand(tomConstants.tomParagraph);
+						int paraStart = paraRange.Start;
+						int paraEnd = paraRange.End;
+						int textEnd = paraEnd > paraStart ? paraEnd - 1 : paraEnd;
 
-					bool isList = listType != tomConstants.tomListNone;
-
-					int headingLevel = 0;
-					bool preformatted = false;
-					if (!isList && textEnd > paraStart) {
-						var probeChar = doc.Range2(paraStart, paraStart + 1);
+						var para = paraRange.Para;
+						int listType;
+						int listLevel;
+						int alignment;
 						try {
-							var pFont = probeChar.Font;
-							try {
-								var blockStyle = BlockStyleHelper.GetBlockStyleFromFont(pFont.Size, pFont.Bold == tomConstants.tomTrue, pFont.Name);
-								if (blockStyle != BlockStyle.Paragraph && blockStyle != BlockStyle.Preformatted)
-									headingLevel = (int)blockStyle;
-								else if (blockStyle == BlockStyle.Preformatted)
-									preformatted = true;
-							}
-							finally {
-								Marshal.ReleaseComObject(pFont);
-							}
+							listType = para.ListType & 0xFFFF;
+							listLevel = para.ListLevelIndex;
+							alignment = para.Alignment;
+							if (alignment < 0 || alignment > 3) alignment = tomConstants.tomAlignLeft;
 						}
 						finally {
-							Marshal.ReleaseComObject(probeChar);
-						}
-					}
-
-					if (isList) {
-						int targetDepth = listLevel + 1;
-
-						while (listTypeStack.Count > targetDepth) {
-							int top = listTypeStack.Count - 1;
-							if (liOpenStack[top]) sb.Append("</li>");
-							sb.Append(GetEmitListCloseTag(listTypeStack[top]));
-							listTypeStack.RemoveAt(top);
-							liOpenStack.RemoveAt(top);
+							Marshal.ReleaseComObject(para);
 						}
 
-						if (listTypeStack.Count == targetDepth) {
-							int top = listTypeStack.Count - 1;
-							if (listTypeStack[top] != listType) {
+						bool isList = listType != tomConstants.tomListNone;
+
+						int headingLevel = 0;
+						bool preformatted = false;
+						if (!isList && textEnd > paraStart) {
+							var probeChar = doc.Range2(paraStart, paraStart + 1);
+							try {
+								var pFont = probeChar.Font;
+								try {
+									var blockStyle = BlockStyleHelper.GetBlockStyleFromFont(pFont.Size, pFont.Bold == tomConstants.tomTrue, pFont.Name);
+									if (blockStyle != BlockStyle.Paragraph && blockStyle != BlockStyle.Preformatted)
+										headingLevel = (int)blockStyle;
+									else if (blockStyle == BlockStyle.Preformatted)
+										preformatted = true;
+								}
+								finally {
+									Marshal.ReleaseComObject(pFont);
+								}
+							}
+							finally {
+								Marshal.ReleaseComObject(probeChar);
+							}
+						}
+
+						if (isList) {
+							int targetDepth = listLevel + 1;
+
+							while (listTypeStack.Count > targetDepth) {
+								int top = listTypeStack.Count - 1;
 								if (liOpenStack[top]) sb.Append("</li>");
 								sb.Append(GetEmitListCloseTag(listTypeStack[top]));
 								listTypeStack.RemoveAt(top);
 								liOpenStack.RemoveAt(top);
 							}
-							else if (liOpenStack[top]) {
-								sb.Append("</li>");
-								liOpenStack[top] = false;
+
+							if (listTypeStack.Count == targetDepth) {
+								int top = listTypeStack.Count - 1;
+								if (listTypeStack[top] != listType) {
+									if (liOpenStack[top]) sb.Append("</li>");
+									sb.Append(GetEmitListCloseTag(listTypeStack[top]));
+									listTypeStack.RemoveAt(top);
+									liOpenStack.RemoveAt(top);
+								}
+								else if (liOpenStack[top]) {
+									sb.Append("</li>");
+									liOpenStack[top] = false;
+								}
 							}
-						}
 
-						while (listTypeStack.Count < targetDepth) {
-							if (listTypeStack.Count > 0 && !liOpenStack[listTypeStack.Count - 1]) {
-								sb.Append("<li>");
-								liOpenStack[listTypeStack.Count - 1] = true;
+							while (listTypeStack.Count < targetDepth) {
+								if (listTypeStack.Count > 0 && !liOpenStack[listTypeStack.Count - 1]) {
+									sb.Append("<li>");
+									liOpenStack[listTypeStack.Count - 1] = true;
+								}
+
+								sb.Append(GetEmitListOpenTag(listType));
+								listTypeStack.Add(listType);
+								liOpenStack.Add(false);
 							}
-							sb.Append(GetEmitListOpenTag(listType));
-							listTypeStack.Add(listType);
-							liOpenStack.Add(false);
+
+							sb.Append("<li");
+							if (alignment != tomConstants.tomAlignLeft)
+								sb.Append(" style=\"text-align: ").Append(AlignmentToCss(alignment)).Append("\"");
+							sb.Append('>');
+							liOpenStack[liOpenStack.Count - 1] = true;
+
+							if (textEnd > paraStart)
+								EmitHtmlInlineContent(doc, richOle, sb, paraStart, textEnd, !htmlFontSizing, false, defaultFontName, defaultFontSize, imageFormat);
+						}
+						else {
+							CloseAllLists(sb, listTypeStack, liOpenStack);
+
+							string tag = "p";
+							if (headingLevel > 0) tag = "h" + headingLevel;
+							else if (preformatted) tag = "pre";
+
+							sb.Append('<').Append(tag);
+							if (alignment != tomConstants.tomAlignLeft)
+								sb.Append(" style=\"text-align: ").Append(AlignmentToCss(alignment)).Append("\"");
+							sb.Append('>');
+
+							string baseFont = defaultFontName;
+							float baseSize = defaultFontSize;
+							if (headingLevel > 0) {
+								baseSize = BlockStyleHelper.HeadingPointSizes[headingLevel];
+							}
+							else if (preformatted) {
+								baseFont = BlockStyleHelper.PreformattedFontName;
+								baseSize = BlockStyleHelper.PreformattedPointSize;
+							}
+
+							if (textEnd > paraStart)
+								EmitHtmlInlineContent(doc, richOle, sb, paraStart, textEnd, !htmlFontSizing, headingLevel > 0, baseFont, baseSize, imageFormat);
+							sb.Append("</").Append(tag).Append('>');
 						}
 
-						sb.Append("<li");
-						if (alignment != tomConstants.tomAlignLeft)
-							sb.Append(" style=\"text-align: ").Append(AlignmentToCss(alignment)).Append("\"");
-						sb.Append('>');
-						liOpenStack[liOpenStack.Count - 1] = true;
-
-						if (textEnd > paraStart)
-							EmitHtmlInlineContent(doc, richOle, sb, paraStart, textEnd, !htmlFontSizing, false, defaultFontName, defaultFontSize, imageFormat);
+						pos = paraEnd;
+						if (pos <= paraStart) pos = paraStart + 1;
 					}
-					else {
-						CloseAllLists(sb, listTypeStack, liOpenStack);
-
-						string tag = "p";
-						if (headingLevel > 0) tag = "h" + headingLevel;
-						else if (preformatted) tag = "pre";
-
-						sb.Append('<').Append(tag);
-						if (alignment != tomConstants.tomAlignLeft)
-							sb.Append(" style=\"text-align: ").Append(AlignmentToCss(alignment)).Append("\"");
-						sb.Append('>');
-
-						string baseFont = defaultFontName;
-						float baseSize = defaultFontSize;
-						if (headingLevel > 0) {
-							baseSize = BlockStyleHelper.HeadingPointSizes[headingLevel];
-						} else if (preformatted) {
-							baseFont = BlockStyleHelper.PreformattedFontName;
-							baseSize = BlockStyleHelper.PreformattedPointSize;
-						}
-						if (textEnd > paraStart)
-							EmitHtmlInlineContent(doc, richOle, sb, paraStart, textEnd, !htmlFontSizing, headingLevel > 0, baseFont, baseSize, imageFormat);
-						sb.Append("</").Append(tag).Append('>');
+					finally {
+						Marshal.ReleaseComObject(paraRange);
 					}
-
-					pos = paraEnd;
-					if (pos <= paraStart) pos = paraStart + 1;
 				}
-				finally {
-					Marshal.ReleaseComObject(paraRange);
-				}
-			}
 
-			CloseAllLists(sb, listTypeStack, liOpenStack);
-			if (completeDocument) sb.Append("</body></html>");
-			return sb.ToString();
+				CloseAllLists(sb, listTypeStack, liOpenStack);
+				if (completeDocument) sb.Append("</body></html>");
+				return sb.ToString();
 			}
 			finally {
 				if (richOle != null) Marshal.ReleaseComObject(richOle);
@@ -225,10 +231,10 @@ namespace EllipticBit.RichEditorNET.Formatting
 					if (newUnderline <= 0)
 						newUnderline = 0;
 					else if (newUnderline != (int)UnderlineStyle.Single &&
-						newUnderline != (int)UnderlineStyle.Double &&
-						newUnderline != (int)UnderlineStyle.Dotted &&
-						newUnderline != (int)UnderlineStyle.Dashed &&
-						newUnderline != (int)UnderlineStyle.Wavy)
+					         newUnderline != (int)UnderlineStyle.Double &&
+					         newUnderline != (int)UnderlineStyle.Dotted &&
+					         newUnderline != (int)UnderlineStyle.Dashed &&
+					         newUnderline != (int)UnderlineStyle.Wavy)
 						newUnderline = (int)UnderlineStyle.Single;
 
 					string newUrl = GetEmitCleanUrl(runRange.URL);
@@ -245,23 +251,30 @@ namespace EllipticBit.RichEditorNET.Formatting
 					}
 
 					bool formatChanged = newBold != curBold || newItalic != curItalic || newStrike != curStrike ||
-						newUnderline != curUnderline || newSup != curSup || newSub != curSub ||
-						newFore != curFore || newBack != curBack || newUrl != curUrl ||
-						newFontName != curFontName || Math.Abs(newFontSize - curFontSize) > 0.01f;
+					                     newUnderline != curUnderline || newSup != curSup || newSub != curSub ||
+					                     newFore != curFore || newBack != curBack || newUrl != curUrl ||
+					                     newFontName != curFontName || Math.Abs(newFontSize - curFontSize) > 0.01f;
 
 					if (formatChanged && tagsOpen) {
 						CloseHtmlInlineTags(sb, curBold, curItalic, curStrike, curUnderline, curSup, curSub, curFore, curBack, curUrl, curFontName, curFontSize);
 						tagsOpen = false;
 					}
 
-					curBold = newBold; curItalic = newItalic; curStrike = newStrike;
-					curUnderline = newUnderline; curSup = newSup; curSub = newSub;
-					curFore = newFore; curBack = newBack; curUrl = newUrl;
-					curFontName = newFontName; curFontSize = newFontSize;
+					curBold = newBold;
+					curItalic = newItalic;
+					curStrike = newStrike;
+					curUnderline = newUnderline;
+					curSup = newSup;
+					curSub = newSub;
+					curFore = newFore;
+					curBack = newBack;
+					curUrl = newUrl;
+					curFontName = newFontName;
+					curFontSize = newFontSize;
 
 					bool hasFormatting = curBold || curItalic || curStrike || curUnderline != 0 ||
-						curSup || curSub || curFore != tomConstants.tomAutoColor || curBack != tomConstants.tomAutoColor ||
-						curUrl.Length > 0 || NeedsStyleSpan(curFore, curBack, curUnderline, curFontName, curFontSize);
+					                     curSup || curSub || curFore != tomConstants.tomAutoColor || curBack != tomConstants.tomAutoColor ||
+					                     curUrl.Length > 0 || NeedsStyleSpan(curFore, curBack, curUnderline, curFontName, curFontSize);
 
 					int segStart = 0;
 					for (int idx = 0; idx <= text.Length; idx++) {
@@ -274,6 +287,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 								OpenHtmlInlineTags(sb, curBold, curItalic, curStrike, curUnderline, curSup, curSub, curFore, curBack, curUrl, curFontName, curFontSize);
 								tagsOpen = true;
 							}
+
 							sb.Append(WebUtility.HtmlEncode(text.Substring(segStart, idx - segStart)));
 						}
 
@@ -282,6 +296,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 								CloseHtmlInlineTags(sb, curBold, curItalic, curStrike, curUnderline, curSup, curSub, curFore, curBack, curUrl, curFontName, curFontSize);
 								tagsOpen = false;
 							}
+
 							EmitImageTag(doc, richOle, sb, runDocStart + docOffset + idx, imageFormat);
 							segStart = idx + 1;
 						}
@@ -328,9 +343,9 @@ namespace EllipticBit.RichEditorNET.Formatting
 
 		private static bool NeedsStyleSpan(int foreColor, int backColor, int underline, string fontName, float fontSize) {
 			return foreColor != tomConstants.tomAutoColor || backColor != tomConstants.tomAutoColor ||
-				(underline > 0 && underline != (int)UnderlineStyle.Single) ||
-				fontName.Length > 0 ||
-				fontSize > 0;
+			       (underline > 0 && underline != (int)UnderlineStyle.Single) ||
+			       fontName.Length > 0 ||
+			       fontSize > 0;
 		}
 
 		private static string BuildSpanStyle(int foreColor, int backColor, int underline, string fontName, float fontSize) {
@@ -341,18 +356,22 @@ namespace EllipticBit.RichEditorNET.Formatting
 				if (sb.Length > 0) sb.Append("; ");
 				sb.Append("font-size: ").Append(fontSize.ToString("0.##", CultureInfo.InvariantCulture)).Append("pt");
 			}
+
 			if (foreColor != tomConstants.tomAutoColor) {
 				if (sb.Length > 0) sb.Append("; ");
 				sb.Append("color: ").Append(OleColorToCss(foreColor));
 			}
+
 			if (backColor != tomConstants.tomAutoColor) {
 				if (sb.Length > 0) sb.Append("; ");
 				sb.Append("background-color: ").Append(OleColorToCss(backColor));
 			}
+
 			if (underline > 0 && underline != (int)UnderlineStyle.Single) {
 				if (sb.Length > 0) sb.Append("; ");
 				sb.Append("text-decoration: underline; text-decoration-style: ").Append(GetCssTextDecorationStyle(underline));
 			}
+
 			return sb.ToString();
 		}
 
@@ -446,7 +465,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 			int heightPx = HimetricToPixels(heightHimetric);
 			byte[] emit = ConvertImageBytes(imageData, imageFormat, ref widthPx, ref heightPx) ?? imageData;
 
-						string mimeType = GetEmitImageMimeType(emit);
+			string mimeType = GetEmitImageMimeType(emit);
 			string base64 = ToWebSafeBase64(emit);
 
 			if (url.Length > 0)
@@ -481,7 +500,9 @@ namespace EllipticBit.RichEditorNET.Formatting
 					}
 				}
 			}
-			catch { return null; }
+			catch {
+				return null;
+			}
 		}
 
 		private static int HimetricToPixels(int himetric) {
@@ -497,6 +518,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 				if (data[0] == 0x47 && data[1] == 0x49 && data[2] == 0x46)
 					return "image/gif";
 			}
+
 			return "image/png";
 		}
 
@@ -520,6 +542,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 							clearRange.SetRange(0, storyLength);
 							clearRange.Text = string.Empty;
 						}
+
 						clearRange.SetRange(0, 0);
 						var resetFont = clearRange.Font;
 						try {
@@ -548,16 +571,24 @@ namespace EllipticBit.RichEditorNET.Formatting
 
 		#region - Data Types -
 
-		private enum TokenType { Text, OpenTag, CloseTag, SelfClosingTag }
+		private enum TokenType
+		{
+			Text,
+			OpenTag,
+			CloseTag,
+			SelfClosingTag
+		}
 
-		private struct HtmlToken {
+		private struct HtmlToken
+		{
 			public TokenType Type;
 			public string TagName;
 			public string Text;
 			public Dictionary<string, string> Attributes;
 		}
 
-		private struct StyleOverride {
+		private struct StyleOverride
+		{
 			public bool? Bold;
 			public bool? Italic;
 			public int? Underline;
@@ -572,12 +603,14 @@ namespace EllipticBit.RichEditorNET.Formatting
 			public float? FontSize;
 		}
 
-		private struct StyleEntry {
+		private struct StyleEntry
+		{
 			public string TagName;
 			public StyleOverride Override;
 		}
 
-		private struct EffectiveStyle {
+		private struct EffectiveStyle
+		{
 			public bool Bold;
 			public bool Italic;
 			public int Underline;
@@ -592,7 +625,8 @@ namespace EllipticBit.RichEditorNET.Formatting
 			public float FontSize;
 		}
 
-		private struct InlineSpan {
+		private struct InlineSpan
+		{
 			public string Text;
 			public bool Bold;
 			public bool Italic;
@@ -611,7 +645,8 @@ namespace EllipticBit.RichEditorNET.Formatting
 			public int ImageHeight;
 		}
 
-		private struct ParagraphBlock {
+		private struct ParagraphBlock
+		{
 			public List<InlineSpan> Spans;
 			public int ListType;
 			public int ListLevel;
@@ -653,7 +688,11 @@ namespace EllipticBit.RichEditorNET.Formatting
 					}
 
 					int tagEnd = html.IndexOf('>', i + 1);
-					if (tagEnd < 0) { textBuf.Append('<'); i++; continue; }
+					if (tagEnd < 0) {
+						textBuf.Append('<');
+						i++;
+						continue;
+					}
 
 					string tagContent = html.Substring(i + 1, tagEnd - i - 1);
 					i = tagEnd + 1;
@@ -778,8 +817,8 @@ namespace EllipticBit.RichEditorNET.Formatting
 				throw new NotSupportedException("Unsupported HTML tag: '" + tagName + "'.");
 
 			if (token.Type == TokenType.CloseTag ||
-				IgnoredContentElements.Contains(tagName) ||
-				tagName == "html" || tagName == "body")
+			    IgnoredContentElements.Contains(tagName) ||
+			    tagName == "html" || tagName == "body")
 				return;
 
 			if (token.Attributes != null) {
@@ -805,12 +844,17 @@ namespace EllipticBit.RichEditorNET.Formatting
 					return attrName.Equals("href", StringComparison.OrdinalIgnoreCase);
 				case "img":
 					switch (attrName.ToLowerInvariant()) {
-						case "src": case "alt": case "width": case "height": return true;
+						case "src":
+						case "alt":
+						case "width":
+						case "height": return true;
 						default: return false;
 					}
 				case "font":
 					switch (attrName.ToLowerInvariant()) {
-						case "face": case "size": case "color": return true;
+						case "face":
+						case "size":
+						case "color": return true;
 						default: return false;
 					}
 				case "ol":
@@ -872,6 +916,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 									FlushBlock(blocks, ref currentSpans, currentListType, currentListLevel,
 										currentHeadingLevel, true, ComputeBlockAlignment(styleStack));
 								}
+
 								if (line.Length > 0)
 									currentSpans.Add(CreateSpan(line, style));
 							}
@@ -883,6 +928,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 								currentSpans.Add(CreateSpan(text, style));
 							}
 						}
+
 						break;
 
 					case TokenType.OpenTag:
@@ -910,10 +956,10 @@ namespace EllipticBit.RichEditorNET.Formatting
 								if (token.Attributes.TryGetValue("alt", out string alt))
 									altText = alt ?? "";
 								if (token.Attributes.TryGetValue("width", out string wStr) &&
-									int.TryParse(wStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out int w) && w > 0)
+								    int.TryParse(wStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out int w) && w > 0)
 									imgWidth = w;
 								if (token.Attributes.TryGetValue("height", out string hStr) &&
-									int.TryParse(hStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out int h) && h > 0)
+								    int.TryParse(hStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out int h) && h > 0)
 									imgHeight = h;
 								if (token.Attributes.TryGetValue("src", out string src))
 									imageData = ParseDataUri(src);
@@ -931,6 +977,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 								Url = imgStyle.Url ?? string.Empty
 							});
 						}
+
 						break;
 
 					case TokenType.CloseTag:
@@ -976,6 +1023,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 					currentListType = listStack[listStack.Count - 1];
 					currentListLevel = listStack.Count - 1;
 				}
+
 				PushStyleEntry(styleStack, token);
 				return;
 			}
@@ -987,6 +1035,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 					currentListType = tomConstants.tomListNone;
 					currentListLevel = 0;
 				}
+
 				return;
 			}
 
@@ -997,6 +1046,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 					currentListType = tomConstants.tomListNone;
 					currentListLevel = 0;
 				}
+
 				preDepth++;
 				currentPreformatted = true;
 				currentHeadingLevel = 0;
@@ -1012,6 +1062,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 					currentListType = tomConstants.tomListNone;
 					currentListLevel = 0;
 				}
+
 				currentHeadingLevel = headingLevel;
 				currentPreformatted = false;
 				PushStyleEntry(styleStack, token);
@@ -1025,6 +1076,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 					currentListType = tomConstants.tomListNone;
 					currentListLevel = 0;
 				}
+
 				currentHeadingLevel = 0;
 				currentPreformatted = preDepth > 0;
 				PushStyleEntry(styleStack, token);
@@ -1053,6 +1105,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 					currentListType = tomConstants.tomListNone;
 					currentListLevel = 0;
 				}
+
 				return;
 			}
 
@@ -1068,6 +1121,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 					currentListType = tomConstants.tomListNone;
 					currentListLevel = 0;
 				}
+
 				return;
 			}
 
@@ -1081,6 +1135,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 					currentListType = tomConstants.tomListNone;
 					currentListLevel = 0;
 				}
+
 				return;
 			}
 
@@ -1094,6 +1149,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 					currentListType = tomConstants.tomListNone;
 					currentListLevel = 0;
 				}
+
 				return;
 			}
 
@@ -1105,6 +1161,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 					currentListType = tomConstants.tomListNone;
 					currentListLevel = 0;
 				}
+
 				return;
 			}
 
@@ -1136,6 +1193,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 				if (styleStack[i].Override.Alignment.HasValue)
 					alignment = styleStack[i].Override.Alignment.Value;
 			}
+
 			return alignment;
 		}
 
@@ -1158,6 +1216,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 					spans[0] = first;
 				}
 			}
+
 			if (spans.Count > 0 && spans[spans.Count - 1].Text != null) {
 				var last = spans[spans.Count - 1];
 				string trimmedEnd = last.Text.TrimEnd(TrimmableWhitespace);
@@ -1166,6 +1225,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 					spans[spans.Count - 1] = last;
 				}
 			}
+
 			while (spans.Count > 0 && spans[0].Text != null && spans[0].Text.Length == 0)
 				spans.RemoveAt(0);
 			while (spans.Count > 0 && spans[spans.Count - 1].Text != null && spans[spans.Count - 1].Text.Length == 0)
@@ -1189,6 +1249,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 					lastWasSpace = false;
 				}
 			}
+
 			return sb.ToString();
 		}
 
@@ -1261,11 +1322,13 @@ namespace EllipticBit.RichEditorNET.Formatting
 							float? fs = ParseHtmlFontSize(sizeAttr);
 							if (fs.HasValue) over.FontSize = fs.Value;
 						}
+
 						if (attrs.TryGetValue("color", out string fontColor)) {
 							int? fc = ParseCssColor(fontColor);
 							if (fc.HasValue) over.ForeColor = fc.Value;
 						}
 					}
+
 					break;
 			}
 
@@ -1274,6 +1337,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 					int? al = MapAlignValue(alignAttr.Trim().ToLowerInvariant());
 					if (al.HasValue) over.Alignment = al.Value;
 				}
+
 				if (attrs.TryGetValue("style", out string style))
 					MergeInlineStyle(ref over, style);
 			}
@@ -1296,7 +1360,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 				switch (property) {
 					case "font-weight":
 						if (valueLower == "bold" || valueLower == "bolder" ||
-							(int.TryParse(valueLower, NumberStyles.Integer, CultureInfo.InvariantCulture, out int weight) && weight >= 700))
+						    (int.TryParse(valueLower, NumberStyles.Integer, CultureInfo.InvariantCulture, out int weight) && weight >= 700))
 							over.Bold = true;
 						else if (valueLower == "normal" || valueLower == "lighter")
 							over.Bold = false;
@@ -1324,6 +1388,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 							else if (valueLower.Contains("dashed")) underlineStyleVal = (int)UnderlineStyle.Dashed;
 							else if (valueLower.Contains("wavy")) underlineStyleVal = (int)UnderlineStyle.Wavy;
 						}
+
 						break;
 
 					case "text-decoration-line":
@@ -1337,6 +1402,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 							if (valueLower.Contains("line-through"))
 								over.StrikeThrough = true;
 						}
+
 						break;
 
 					case "text-decoration-style":
@@ -1354,27 +1420,27 @@ namespace EllipticBit.RichEditorNET.Formatting
 						break;
 
 					case "vertical-align":
-							if (valueLower == "super")
-								over.Superscript = true;
-							else if (valueLower == "sub")
-								over.Subscript = true;
-							break;
+						if (valueLower == "super")
+							over.Superscript = true;
+						else if (valueLower == "sub")
+							over.Subscript = true;
+						break;
 
-						case "text-align":
-							int? align = MapAlignValue(valueLower);
-							if (align.HasValue) over.Alignment = align.Value;
-							break;
+					case "text-align":
+						int? align = MapAlignValue(valueLower);
+						if (align.HasValue) over.Alignment = align.Value;
+						break;
 
-						case "font-family":
-							string fn = ParseFontFamilyValue(value);
-							if (!string.IsNullOrEmpty(fn)) over.FontName = fn;
-							break;
+					case "font-family":
+						string fn = ParseFontFamilyValue(value);
+						if (!string.IsNullOrEmpty(fn)) over.FontName = fn;
+						break;
 
-						case "font-size":
-							float? sz = ParseCssFontSize(valueLower);
-							if (sz.HasValue) over.FontSize = sz.Value;
-							break;
-					}
+					case "font-size":
+						float? sz = ParseCssFontSize(valueLower);
+						if (sz.HasValue) over.FontSize = sz.Value;
+						break;
+				}
 			}
 
 			if (hasUnderline == true)
@@ -1449,6 +1515,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 					case "I": return tomConstants.tomListNumberAsUCRoman;
 				}
 			}
+
 			return tomConstants.tomListNumberAsArabic;
 		}
 
@@ -1479,22 +1546,23 @@ namespace EllipticBit.RichEditorNET.Formatting
 						return tomConstants.tomListNumberAsUCRoman;
 				}
 			}
+
 			return defaultType;
 		}
 
 		private static int? ParseCssColor(string value) {
 			value = value.Trim().ToLowerInvariant();
 			if (value.Length == 0 || value == "inherit" || value == "initial" || value == "unset" ||
-				value == "currentcolor" || value == "transparent")
+			    value == "currentcolor" || value == "transparent")
 				return null;
 
 			if (value.StartsWith("rgba(") && value.EndsWith(")")) {
 				string inner = value.Substring(5, value.Length - 6);
 				var parts = inner.Split(',');
 				if (parts.Length >= 3 &&
-					int.TryParse(parts[0].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int r) &&
-					int.TryParse(parts[1].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int g) &&
-					int.TryParse(parts[2].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int b))
+				    int.TryParse(parts[0].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int r) &&
+				    int.TryParse(parts[1].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int g) &&
+				    int.TryParse(parts[2].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int b))
 					return ColorTranslator.ToOle(Color.FromArgb(Clamp(r), Clamp(g), Clamp(b)));
 				return null;
 			}
@@ -1503,9 +1571,9 @@ namespace EllipticBit.RichEditorNET.Formatting
 				string inner = value.Substring(4, value.Length - 5);
 				var parts = inner.Split(',');
 				if (parts.Length == 3 &&
-					int.TryParse(parts[0].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int r) &&
-					int.TryParse(parts[1].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int g) &&
-					int.TryParse(parts[2].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int b))
+				    int.TryParse(parts[0].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int r) &&
+				    int.TryParse(parts[1].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int g) &&
+				    int.TryParse(parts[2].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int b))
 					return ColorTranslator.ToOle(Color.FromArgb(Clamp(r), Clamp(g), Clamp(b)));
 				return null;
 			}
@@ -1553,12 +1621,13 @@ namespace EllipticBit.RichEditorNET.Formatting
 				if (name.Length == 0) continue;
 				string lower = name.ToLowerInvariant();
 				if (lower == "serif" || lower == "sans-serif" || lower == "monospace" ||
-					lower == "cursive" || lower == "fantasy" || lower == "system-ui" ||
-					lower == "ui-serif" || lower == "ui-sans-serif" || lower == "ui-monospace" ||
-					lower == "ui-rounded" || lower == "emoji" || lower == "math" || lower == "fangsong")
+				    lower == "cursive" || lower == "fantasy" || lower == "system-ui" ||
+				    lower == "ui-serif" || lower == "ui-sans-serif" || lower == "ui-monospace" ||
+				    lower == "ui-rounded" || lower == "emoji" || lower == "math" || lower == "fangsong")
 					continue;
 				return name;
 			}
+
 			return null;
 		}
 
@@ -1580,27 +1649,27 @@ namespace EllipticBit.RichEditorNET.Formatting
 
 			if (value.EndsWith("pt")) {
 				if (float.TryParse(value.Substring(0, value.Length - 2).Trim(),
-					NumberStyles.Float, CultureInfo.InvariantCulture, out float pt) && pt > 0)
+					    NumberStyles.Float, CultureInfo.InvariantCulture, out float pt) && pt > 0)
 					return pt;
 			}
 			else if (value.EndsWith("px")) {
 				if (float.TryParse(value.Substring(0, value.Length - 2).Trim(),
-					NumberStyles.Float, CultureInfo.InvariantCulture, out float px) && px > 0)
+					    NumberStyles.Float, CultureInfo.InvariantCulture, out float px) && px > 0)
 					return px * 0.75f;
 			}
 			else if (value.EndsWith("em")) {
 				if (float.TryParse(value.Substring(0, value.Length - 2).Trim(),
-					NumberStyles.Float, CultureInfo.InvariantCulture, out float em) && em > 0)
+					    NumberStyles.Float, CultureInfo.InvariantCulture, out float em) && em > 0)
 					return em * BlockStyleHelper.ParagraphPointSize;
 			}
 			else if (value.EndsWith("rem")) {
 				if (float.TryParse(value.Substring(0, value.Length - 3).Trim(),
-					NumberStyles.Float, CultureInfo.InvariantCulture, out float rem) && rem > 0)
+					    NumberStyles.Float, CultureInfo.InvariantCulture, out float rem) && rem > 0)
 					return rem * BlockStyleHelper.ParagraphPointSize;
 			}
 			else if (value.EndsWith("%")) {
 				if (float.TryParse(value.Substring(0, value.Length - 1).Trim(),
-					NumberStyles.Float, CultureInfo.InvariantCulture, out float pct) && pct > 0)
+					    NumberStyles.Float, CultureInfo.InvariantCulture, out float pct) && pct > 0)
 					return pct / 100f * BlockStyleHelper.ParagraphPointSize;
 			}
 
@@ -1620,6 +1689,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 					case 7: return 36f;
 				}
 			}
+
 			return ParseCssFontSize(value);
 		}
 
@@ -1658,8 +1728,8 @@ namespace EllipticBit.RichEditorNET.Formatting
 				using (var image = Image.FromStream(ms)) {
 					var guid = image.RawFormat.Guid;
 					return guid == ImageFormat.Jpeg.Guid ||
-						guid == ImageFormat.Png.Guid ||
-						guid == ImageFormat.Gif.Guid;
+					       guid == ImageFormat.Png.Guid ||
+					       guid == ImageFormat.Gif.Guid;
 				}
 			}
 			catch {
@@ -1676,6 +1746,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 					g.DrawLine(pen, 0, 0, width, height);
 					g.DrawLine(pen, width, 0, 0, height);
 				}
+
 				using (var ms = new MemoryStream()) {
 					bmp.Save(ms, ImageFormat.Png);
 					return ms.ToArray();
@@ -1719,6 +1790,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 									prevPara.ListStart = 1;
 									prevPara.SetIndents(0, prevBlock.ListLevel * 18f, 0);
 								}
+
 								if (prevBlock.Alignment != tomConstants.tomAlignLeft)
 									prevPara.Alignment = prevBlock.Alignment;
 							}
@@ -1802,6 +1874,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 							lastPara.ListStart = 1;
 							lastPara.SetIndents(0, lastBlock.ListLevel * 18f, 0);
 						}
+
 						if (lastBlock.Alignment != tomConstants.tomAlignLeft)
 							lastPara.Alignment = lastBlock.Alignment;
 					}
@@ -1842,6 +1915,7 @@ namespace EllipticBit.RichEditorNET.Formatting
 							}
 						}
 					}
+
 					continue;
 				}
 
@@ -1853,18 +1927,18 @@ namespace EllipticBit.RichEditorNET.Formatting
 				range.SetRange(insertEnd, insertEnd);
 
 				bool needsFormatting = span.Bold || span.Italic || span.Underline != 0 ||
-					span.StrikeThrough || span.Superscript || span.Subscript ||
-					span.ForeColor != tomConstants.tomAutoColor || span.BackColor != tomConstants.tomAutoColor ||
-					!string.IsNullOrEmpty(span.Url) ||
-					!string.IsNullOrEmpty(span.FontName) || span.FontSize > 0;
+				                       span.StrikeThrough || span.Superscript || span.Subscript ||
+				                       span.ForeColor != tomConstants.tomAutoColor || span.BackColor != tomConstants.tomAutoColor ||
+				                       !string.IsNullOrEmpty(span.Url) ||
+				                       !string.IsNullOrEmpty(span.FontName) || span.FontSize > 0;
 
 				if (needsFormatting) {
 					var fmtRange = doc.Range2(insertStart, insertEnd);
 					try {
 						bool needsFontFormat = span.Bold || span.Italic || span.Underline != 0 ||
-							span.StrikeThrough || span.Superscript || span.Subscript ||
-							span.ForeColor != tomConstants.tomAutoColor || span.BackColor != tomConstants.tomAutoColor ||
-							!string.IsNullOrEmpty(span.FontName) || span.FontSize > 0;
+						                       span.StrikeThrough || span.Superscript || span.Subscript ||
+						                       span.ForeColor != tomConstants.tomAutoColor || span.BackColor != tomConstants.tomAutoColor ||
+						                       !string.IsNullOrEmpty(span.FontName) || span.FontSize > 0;
 
 						if (needsFontFormat) {
 							var font = fmtRange.Font;
