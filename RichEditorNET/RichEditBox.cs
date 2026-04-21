@@ -22,6 +22,9 @@ namespace EllipticBit.RichEditorNET
 
 		public RichEditBox() {
 			HideSelection = false;
+			AcceptsTab = true;
+			Multiline = true;
+			ScrollBars = RichTextBoxScrollBars.Vertical;
 		}
 
 		protected override CreateParams CreateParams {
