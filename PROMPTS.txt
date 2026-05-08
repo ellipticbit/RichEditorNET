@@ -71,5 +71,6 @@ It is possible that different instances of the control could be displayed on dif
 
 I undid the prior change because it did not work. However, it did give an interesting result. When the popup was closed after making a formatting edit the text rippled as if the "redraw flash" was actually the system going through the ranges sequentially and causing each range to force a redraw. Furthermore the formatting edit was shown after the button was pushed, but was cleared when the popup was closed which is further evidence that some formatting process is being run when the popup is closed.
 
+Ok, I undid those changes because they didn't work, however, I did notice a different strange behavior. When attempting to set Bold on the word "monospace", or any other editing option, the cursor appears to move to character 0 and then attempts to set the formatting at the caret in 0 position with nothing selected. Could this be related to an earlier bug fix that dealt with the formatting at position zero not being cleared?
 
-
+I received a bug report that using Ctrl-Z to undo an action wiped out the text and reset the box to a blank state. Is it possible that the box is being cleared when a new Html/Markdown value is set and that clear command is being kept in the undo queue? The desired behavior is that the value set in the Html/Markdown properties is the "First" value in the undo queue and cannot be undone.

@@ -326,10 +326,12 @@ namespace EllipticBit.RichEditorNET
 				return MarkdownFormatter.ToMarkdown(TextDocument, EnableGithubMarkdown);
 			}
 			set {
-				this.ClearUndo();
 				this.Clear();
-				//If value is empty then just clear the box and return
-				if (string.IsNullOrEmpty(value)) return;
+				//If value is empty then just clear the box and reset undo so the empty state is the baseline.
+				if (string.IsNullOrEmpty(value)) {
+					this.ClearUndo();
+					return;
+				}
 
 				if (_textDocument == null) {
 					_pendingMarkdown = value;
@@ -340,10 +342,13 @@ namespace EllipticBit.RichEditorNET
 				bool priorROValue = this.ReadOnly;
 				this.ReadOnly = false;
 
-				Clear();
 				MarkdownFormatter.FromMarkdown(TextDocument, value, EnableGithubMarkdown);
 
 				this.ReadOnly = priorROValue;
+
+				// Reset the undo queue so the populated content is the first/baseline state
+				// and Ctrl-Z cannot wipe it out by undoing the load operations themselves.
+				this.ClearUndo();
 			}
 		}
 
@@ -358,10 +363,12 @@ namespace EllipticBit.RichEditorNET
 				return HtmlFormatter.ToHtml(TextDocument, Handle, EnableHtmlFontSizing, ExportCompleteHtmlDocument, Font.Name, Font.SizeInPoints, HtmlThumbnailImageFormat);
 			}
 			set {
-				this.ClearUndo();
 				this.Clear();
-				//If value is empty then just clear the box and return
-				if (string.IsNullOrEmpty(value)) return;
+				//If value is empty then just clear the box and reset undo so the empty state is the baseline.
+				if (string.IsNullOrEmpty(value)) {
+					this.ClearUndo();
+					return;
+				}
 
 				if (_textDocument == null) {
 					_pendingHtml = value;
@@ -372,10 +379,13 @@ namespace EllipticBit.RichEditorNET
 				bool priorROValue = this.ReadOnly;
 				this.ReadOnly = false;
 
-				Clear();
 				HtmlFormatter.FromHtml(TextDocument, _richEditOle, value, EnableStrictHtml);
 
 				this.ReadOnly = priorROValue;
+
+				// Reset the undo queue so the populated content is the first/baseline state
+				// and Ctrl-Z cannot wipe it out by undoing the load operations themselves.
+				this.ClearUndo();
 			}
 		}
 
@@ -420,16 +430,22 @@ namespace EllipticBit.RichEditorNET
 			bool priorROValue = this.ReadOnly;
 			this.ReadOnly = false;
 
+			bool loadedPending = false;
 			if (_pendingHtml != null) {
 				HtmlFormatter.FromHtml(TextDocument, _richEditOle, _pendingHtml, EnableStrictHtml);
 				_pendingHtml = null;
+				loadedPending = true;
 			}
 			else if (_pendingMarkdown != null) {
 				MarkdownFormatter.FromMarkdown(TextDocument, _pendingMarkdown, EnableGithubMarkdown);
 				_pendingMarkdown = null;
+				loadedPending = true;
 			}
 
 			this.ReadOnly = priorROValue;
+
+			// Ensure pending content set before the handle existed becomes the undo baseline.
+			if (loadedPending) this.ClearUndo();
 		}
 
 		protected override void OnHandleDestroyed(EventArgs e) {
