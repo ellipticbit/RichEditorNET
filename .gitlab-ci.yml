@@ -1,9 +1,19 @@
 # RichEditorNET Build Script
 
-.before_script_template:
+.build_template:
     before_script:
       - "git clean -fdxq"
       - "pwsh -f ./ReplaceVersion.ps1"
+
+.publish_template:
+    before_script:
+      - "git clean -fdxq"
+      - "dotnet tool install --global --prerelease sign"
+      - "pwsh -f ./ReplaceVersion.ps1"
+      - "az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID"
+      - "az account set --subscription $AZURE_SUBSCRIPTION"
+    after_script:
+      - "az logout"
 
 stages:
   - build
@@ -11,7 +21,7 @@ stages:
   - post
 
 Build RichEditorNET Package:
-  extends: .before_script_template
+  extends: .build_template
   stage: build
   tags:
     - linux
@@ -28,10 +38,10 @@ Build RichEditorNET Package:
     - "dotnet build -c Release ./RichEditorNET/RichEditorNET.csproj"
 
 Publish RichEditorNET Package:
-  extends: .before_script_template
+  extends: .publish_template
   stage: publish
   tags:
-    - linux
+    - windows
     - dotnet
   only:
     refs:
@@ -43,7 +53,7 @@ Publish RichEditorNET Package:
   script:
     - "dotnet restore ./RichEditorNET/RichEditorNET.csproj"
     - "dotnet build -c Release ./RichEditorNET/RichEditorNET.csproj"
-    - "dotnet nuget push ./RichEditorNET/**/Release/*.nupkg -s \"https://api.nuget.org/v3/index.json\" -k $NUGET_TOKEN --skip-duplicate"
+    - "dotnet nuget push '.\\RichEditorNET\\bin\\Release\\*.nupkg' -s \"https://api.nuget.org/v3/index.json\" -k $NUGET_TOKEN --skip-duplicate"
 
 Increment Build Counter:
   stage: post

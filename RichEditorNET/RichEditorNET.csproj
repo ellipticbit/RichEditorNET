@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>net8.0-windows;net48</TargetFrameworks>
 		<UseWindowsForms>true</UseWindowsForms>
-		<AssemblyName>RichEditorNET</AssemblyName>
+		<AssemblyName>EllipticBit.RichEditorNET</AssemblyName>
 		<RootNamespace>EllipticBit.RichEditorNET</RootNamespace>
 		<Nullable>enable</Nullable>
 		<DebugType>embedded</DebugType>
@@ -25,6 +25,10 @@
 		<PackageIcon>icon.png</PackageIcon>
 		<Copyright>Copyright © EllipticBit LLC 2026</Copyright>
 		<Description>This library provides a modern replacement for the traditional RichTextBox available in Windows Forms applications.</Description>
+		<PackageTags>ellipticbit rich-editor text-editor rich-text-box rich-text windows-forms</PackageTags>
+		<PackageProjectUrl>https://ellipticbit.com/</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/ellipticbit/RichEditorNET.git</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -32,7 +36,9 @@
 		<None Include="..\README.md" Pack="true" PackagePath="\" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.201" PrivateAssets="All" />
-	</ItemGroup>
+	<Target Name="SignAssembly" AfterTargets="AfterBuild" Condition="'$(TargetFramework)' != '' And '$(AZURE_SIGNING_ENDPOINT)' != ''">
+		<Message Importance="high" Text="Signing assembly '$(TargetPath)' with Azure Trusted Signing." />
+		<Exec Command="sign code trusted-signing &quot;$(TargetPath)&quot; --trusted-signing-endpoint &quot;$(AZURE_SIGNING_ENDPOINT)&quot; --trusted-signing-account &quot;$(AZURE_SIGNING_ACCOUNT)&quot; --trusted-signing-certificate-profile &quot;$(AZURE_SIGNING_PROFILE)&quot; --description &quot;$(Product)&quot; --description-url &quot;$(PackageProjectUrl)&quot;" />
+	</Target>
+
 </Project>
